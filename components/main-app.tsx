@@ -256,14 +256,14 @@ export function MainApp({ onLogout }: MainAppProps) {
               onNewChat={handleNewChat}
               onStartChat={handleStartChat}
             />
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={simulateIncomingCall}
               style={styles.simulateCallButton}
             >
               <Text style={styles.simulateCallButtonText}>
                 📞 Simular llamada
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         );
       case "contacts":

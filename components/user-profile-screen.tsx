@@ -24,7 +24,6 @@ interface ProfileData {
   email: string;
   phone: string;
   bio: string;
-  location: string;
 }
 
 interface FormErrors {
@@ -43,7 +42,6 @@ export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
     email: "juan.perez@email.com",
     phone: "+1 234 567 8900",
     bio: "Desarrollador apasionado por la tecnología y la innovación.",
-    location: "Madrid, España",
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -290,18 +288,7 @@ export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
             </View>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Ubicación</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="location" size={20} color="#8E8E93" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={profileData.location}
-                onChangeText={(value) => handleInputChange("location", value)}
-                placeholder="Ubicación"
-              />
-            </View>
-          </View>
+          
         </View>
       </ScrollView>
     </SafeAreaView>
