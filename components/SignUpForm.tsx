@@ -1,301 +1,220 @@
-import React, { useState } from "react"
+import React, { JSX, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  ScrollView,
   ActivityIndicator,
-} from "react-native"
-import { Eye, EyeOff, User, Mail, Lock, MessageCircle } from "lucide-react-native"
-
-interface FormData {
-  username: string
-  email: string
-  password: string
-  confirmPassword: string
-}
-
-interface FormErrors {
-  username?: string
-  email?: string
-  password?: string
-  confirmPassword?: string
-  general?: string
-}
+} from "react-native";
+import { User, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 
 interface SignUpFormProps {
-  onSwitchToSignIn: () => void
+  onSwitchToSignIn: () => void;
+  onAuthSuccess: (email: string) => void;
 }
 
-export function SignUpForm({ onSwitchToSignIn }: SignUpFormProps) {
-  const [formData, setFormData] = useState<FormData>({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  })
-  const [errors, setErrors] = useState<FormErrors>({})
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
+export function SignUpForm({
+  onSwitchToSignIn,
+  onAuthSuccess,
+}: SignUpFormProps) {
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
 
-    if (!formData.username.trim()) {
-      newErrors.username = "El nombre de usuario es requerido"
-    } else if (formData.username.length < 3) {
-      newErrors.username = "El nombre de usuario debe tener al menos 3 caracteres"
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username = "Solo se permiten letras, números y guiones bajos"
-    }
+    if (!username.trim())
+      newErrors.username = "El nombre de usuario es requerido";
+    else if (username.length < 3)
+      newErrors.username =
+        "El nombre de usuario debe tener al menos 3 caracteres";
+    else if (!/^[a-zA-Z0-9_]+$/.test(username))
+      newErrors.username = "Solo se permiten letras, números y guiones bajos";
 
-    if (!formData.email.trim()) {
-      newErrors.email = "El email es requerido"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Ingresa un email válido"
-    }
+    if (!email.trim()) newErrors.email = "El email es requerido";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      newErrors.email = "Ingresa un email válido";
 
-    if (!formData.password) {
-      newErrors.password = "La contraseña es requerida"
-    } else if (formData.password.length < 6) {
-      newErrors.password = "La contraseña debe tener al menos 6 caracteres"
-    }
+    if (!password) newErrors.password = "La contraseña es requerida";
+    else if (password.length < 6)
+      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Confirma tu contraseña"
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Las contraseñas no coinciden"
-    }
+    if (!confirmPassword) newErrors.confirmPassword = "Confirma tu contraseña";
+    else if (password !== confirmPassword)
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }))
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return
-    setIsLoading(true)
-    setErrors({})
-    try {
-      // Simulación de API
-      await new Promise((r) => setTimeout(r, 1500))
-      console.log("Datos del usuario:", formData)
-      setIsSuccess(true)
-    } catch (e) {
-      setErrors({ general: "Error al crear la cuenta. Inténtalo de nuevo." })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    if (!validateForm()) return;
 
-  if (isSuccess) {
-    return (
-      <View style={styles.card}>
-        <View style={styles.successIcon}>
-          <MessageCircle size={28} color="green" />
-        </View>
-        <Text style={styles.successTitle}>¡Cuenta creada exitosamente!</Text>
-        <Text style={styles.successText}>Bienvenido a ChatApp, {formData.username}</Text>
-        <TouchableOpacity style={styles.button} onPress={onSwitchToSignIn}>
-          <Text style={styles.buttonText}>Ir a iniciar sesión</Text>
-        </TouchableOpacity>
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simula API
+      onAuthSuccess(email);
+    } catch {
+      setErrors({ general: "Error al crear la cuenta. Inténtalo de nuevo." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderInput = (
+    label: string,
+    icon: JSX.Element,
+    value: string,
+    setValue: (text: string) => void,
+    error?: string,
+    secureTextEntry?: boolean,
+    toggleSecure?: () => void
+  ) => (
+    <View style={{ marginBottom: 16 }}>
+      <Text style={styles.label}>{label}</Text>
+      <View
+        style={[styles.inputContainer, error && { borderColor: "#ef4444" }]}
+      >
+        {icon}
+        <TextInput
+          style={[styles.input, secureTextEntry ? { paddingRight: 40 } : {}]}
+          placeholder={label}
+          secureTextEntry={secureTextEntry}
+          autoCapitalize="none"
+          value={value}
+          onChangeText={setValue}
+        />
+        {toggleSecure && (
+          <TouchableOpacity style={styles.eyeButton} onPress={toggleSecure}>
+            {secureTextEntry ? (
+              <EyeOff size={20} color="#9ca3af" />
+            ) : (
+              <Eye size={20} color="#9ca3af" />
+            )}
+          </TouchableOpacity>
+        )}
       </View>
-    )
-  }
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
 
   return (
-    <View style={styles.card}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Crear Cuenta</Text>
-      <Text style={styles.subtitle}>Completa los datos para unirte a ChatApp</Text>
+      <Text style={styles.description}>
+        Completa los datos para unirte a ChatApp
+      </Text>
 
-      {errors.general ? <Text style={styles.error}>{errors.general}</Text> : null}
+      {errors.general && (
+        <Text style={styles.generalError}>{errors.general}</Text>
+      )}
 
-      {/* Username */}
-      <Text style={styles.label}>Nombre de usuario</Text>
-      <View style={styles.inputContainer}>
-        <User size={18} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="tu_usuario"
-          value={formData.username}
-          onChangeText={(t) => handleChange("username", t)}
-          style={[styles.input, errors.username && styles.inputError]}
-          autoCapitalize="none"
-        />
-      </View>
-      {errors.username ? <Text style={styles.error}>{errors.username}</Text> : null}
+      {renderInput(
+        "Nombre de usuario",
+        <User size={20} color="#9ca3af" style={styles.icon} />,
+        username,
+        setUsername,
+        errors.username
+      )}
+      {renderInput(
+        "Email",
+        <Mail size={20} color="#9ca3af" style={styles.icon} />,
+        email,
+        setEmail,
+        errors.email
+      )}
+      {renderInput(
+        "Contraseña",
+        <Lock size={20} color="#9ca3af" style={styles.icon} />,
+        password,
+        setPassword,
+        errors.password,
+        !showPassword,
+        () => setShowPassword((prev) => !prev)
+      )}
+      {renderInput(
+        "Confirmar contraseña",
+        <Lock size={20} color="#9ca3af" style={styles.icon} />,
+        confirmPassword,
+        setConfirmPassword,
+        errors.confirmPassword,
+        !showConfirmPassword,
+        () => setShowConfirmPassword((prev) => !prev)
+      )}
 
-      {/* Email */}
-      <Text style={styles.label}>Email</Text>
-      <View style={styles.inputContainer}>
-        <Mail size={18} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="tu@email.com"
-          value={formData.email}
-          onChangeText={(t) => handleChange("email", t)}
-          style={[styles.input, errors.email && styles.inputError]}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
-      {errors.email ? <Text style={styles.error}>{errors.email}</Text> : null}
-
-      {/* Password */}
-      <Text style={styles.label}>Contraseña</Text>
-      <View style={styles.inputContainer}>
-        <Lock size={18} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="••••••••"
-          value={formData.password}
-          onChangeText={(t) => handleChange("password", t)}
-          secureTextEntry={!showPassword}
-          style={[styles.input, errors.password && styles.inputError]}
-        />
-        <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword((s) => !s)}>
-          {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
-        </TouchableOpacity>
-      </View>
-      {errors.password ? <Text style={styles.error}>{errors.password}</Text> : null}
-
-      {/* Confirm Password */}
-      <Text style={styles.label}>Confirmar contraseña</Text>
-      <View style={styles.inputContainer}>
-        <Lock size={18} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="••••••••"
-          value={formData.confirmPassword}
-          onChangeText={(t) => handleChange("confirmPassword", t)}
-          secureTextEntry={!showConfirmPassword}
-          style={[styles.input, errors.confirmPassword && styles.inputError]}
-        />
-        <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword((s) => !s)}>
-          {showConfirmPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
-        </TouchableOpacity>
-      </View>
-      {errors.confirmPassword ? <Text style={styles.error}>{errors.confirmPassword}</Text> : null}
-
-      {/* Botón */}
-      <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isLoading}>
-        {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Crear cuenta</Text>}
+      <TouchableOpacity
+        style={styles.submitButton}
+        onPress={handleSubmit}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.submitButtonText}>Crear cuenta</Text>
+        )}
       </TouchableOpacity>
 
-      {/* Link login */}
-      <Text style={styles.registerText}>
-        ¿Ya tienes cuenta?{" "}
-        <Text style={styles.link} onPress={onSwitchToSignIn}>
-          Inicia sesión
-        </Text>
-      </Text>
-    </View>
-  )
+      <View style={styles.switchContainer}>
+        <Text style={styles.switchText}>¿Ya tienes cuenta? </Text>
+        <TouchableOpacity onPress={onSwitchToSignIn}>
+          <Text style={styles.switchButton}>Inicia sesión</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    elevation: 2,
-    margin: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+ container: {marginTop: 20,
+    flexGrow: 1,
+    padding: 16,
+    justifyContent: "center",
+    backgroundColor: "#f9fafb",
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 4,
-    color: "#111",
   },
-  subtitle: {
-    textAlign: "center",
-    color: "#666",
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
-    marginTop: 8,
-  },
+  description: { textAlign: "center", color: "#6b7280", marginBottom: 16 },
+  generalError: { color: "#ef4444", textAlign: "center", marginBottom: 12 },
+  label: { marginBottom: 4, fontWeight: "500", color: "#374151" },
   inputContainer: {
-    position: "relative",
-    marginBottom: 8,
-    justifyContent: "center",
-  },
-  icon: {
-    position: "absolute",
-    left: 10,
-    zIndex: 1,
-  },
-  eyeIcon: {
-    position: "absolute",
-    right: 10,
-    zIndex: 1,
-  },
-  input: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#d1d5db",
     borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 36,
-    fontSize: 16,
+    paddingHorizontal: 8,
   },
-  inputError: {
-    borderColor: "red",
-  },
-  error: {
-    color: "red",
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  button: {
-    backgroundColor: "#111",
-    paddingVertical: 14,
+  icon: { marginRight: 8 },
+  input: { flex: 1, height: 40 },
+  eyeButton: { position: "absolute", right: 8, top: 10 },
+  errorText: { color: "#ef4444", fontSize: 12, marginTop: 4 },
+  submitButton: {
+    backgroundColor: "#2563eb",
+    paddingVertical: 12,
     borderRadius: 8,
-    alignItems: "center",
     marginTop: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  link: {
-    color: "#2563eb",
-    fontWeight: "500",
-  },
-  registerText: {
-    textAlign: "center",
-    marginTop: 12,
-    color: "#444",
-  },
-  successIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#d1fae5",
-    justifyContent: "center",
     alignItems: "center",
-    alignSelf: "center",
-    marginBottom: 12,
   },
-  successTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
+  submitButtonText: { color: "#fff", fontWeight: "bold" },
+  switchContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 12,
   },
-  successText: {
-    textAlign: "center",
-    marginBottom: 16,
-    color: "#666",
-  },
-})
+  switchText: { color: "#6b7280" },
+  switchButton: { color: "#2563eb", fontWeight: "bold" },
+});

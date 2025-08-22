@@ -6,8 +6,9 @@ export default function SignUpScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <SignUpForm
-        onSwitchToSignIn={() => navigation.goBack()}
-      />
+        onSwitchToSignIn={() => navigation.goBack()} onAuthSuccess={function (email: string): void {
+          throw new Error("Function not implemented.");
+        } }      />
     </View>
   );
 }
@@ -18,5 +19,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#f0f4ff",
     paddingHorizontal: 20,
+    marginTop: 20,
   },
 });

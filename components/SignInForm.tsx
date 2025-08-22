@@ -1,6 +1,16 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
-import { Mail, Lock } from "lucide-react-native";
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface FormData {
   email: string;
@@ -15,28 +25,34 @@ interface FormErrors {
 
 interface SignInFormProps {
   onSwitchToSignUp: () => void;
-  onForgotPassword: () => void;
-  onLoginSuccess?: () => void;
+  onSwitchToForgotPassword: () => void;
+  onAuthSuccess: () => void;
 }
 
-export function SignInForm({ onSwitchToSignUp, onForgotPassword, onLoginSuccess }: SignInFormProps) {
-  const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
+export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthSuccess }: SignInFormProps) {
+  const [formData, setFormData] = useState<FormData>({
+    email: "",
+    password: "",
+  });
+
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
+    // Validar email
     if (!formData.email.trim()) {
       newErrors.email = "El email es requerido";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Ingresa un email válido";
     }
 
-    if (!formData.password.trim()) {
+    // Validar password
+    if (!formData.password) {
       newErrors.password = "La contraseña es requerida";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
     }
 
     setErrors(newErrors);
@@ -45,185 +61,317 @@ export function SignInForm({ onSwitchToSignUp, onForgotPassword, onLoginSuccess 
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+
+    setIsSuccess(true);
+
+    // if (!validateForm()) return;
+
     setIsLoading(true);
     setErrors({});
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      console.log("Login exitoso con:", formData);
-      if (onLoginSuccess) {
-        onLoginSuccess();
-      }
-    } catch {
-      setErrors({ general: "Email o contraseña incorrectos" });
-    } finally {
-      setIsLoading(false);
-    }
+
+    // try {
+    //   // Simular llamada a API
+    //   await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    //   // Aquí iría la lógica real de login
+    //   console.log("Datos de login:", formData);
+
+      setIsSuccess(true);
+    // } catch (error) {
+    //   setErrors({ general: "Email o contraseña incorrectos. Inténtalo de nuevo." });
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
+  if (isSuccess) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.successCard}>
+          <View style={styles.successIcon}>
+            <Ionicons name="chatbubble" size={32} color="#34C759" />
+          </View>
+          <Text style={styles.successTitle}>¡Bienvenido de vuelta!</Text>
+          <Text style={styles.successMessage}>Has iniciado sesión exitosamente</Text>
+          <TouchableOpacity style={styles.successButton} onPress={onAuthSuccess}>
+            <Text style={styles.successButtonText}>Ir a mensajes</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.appTitle}>ChatApp</Text>
-      <Text style={styles.subtitle}>Accede a tu cuenta</Text>
-      
-      <View style={styles.card}>
-        <Text style={styles.title}>Iniciar Sesión</Text>
-        <Text style={styles.description}>Ingresa tus datos para acceder a ChatApp</Text>
-        
-        {errors.general && <Text style={styles.error}>{errors.general}</Text>}
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.card}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Iniciar Sesión</Text>
+            <Text style={styles.subtitle}>Ingresa tus datos para acceder a ChatApp</Text>
+          </View>
 
-        {/* Email */}
-        <Text style={styles.label}>Email</Text>
-        <View style={[styles.inputContainer, errors.email && styles.inputError]}>
-          <Mail size={18} color="#888" style={styles.icon} />
-          <TextInput
-            placeholder="tuemail@hotmail.com"
-            value={formData.email}
-            onChangeText={(t) => handleInputChange("email", t)}
-            style={styles.input}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          {/* Form */}
+          <View style={styles.form}>
+            {errors.general && (
+              <View style={styles.errorAlert}>
+                <Ionicons name="warning" size={20} color="#FF3B30" />
+                <Text style={styles.errorText}>{errors.general}</Text>
+              </View>
+            )}
+
+            {/* Email Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
+                <Ionicons name="mail" size={20} color="#8E8E93" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="tu@email.com"
+                  value={formData.email}
+                  onChangeText={(value) => handleInputChange("email", value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                />
+              </View>
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
+
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Contraseña</Text>
+              <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
+                <Ionicons name="lock-closed" size={20} color="#8E8E93" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChangeText={(value) => handleInputChange("password", value)}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="password"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#8E8E93"
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitButtonText}>Iniciar sesión</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Links */}
+            <View style={styles.linksContainer}>
+              <TouchableOpacity onPress={onSwitchToForgotPassword}>
+                <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
+              </TouchableOpacity>
+
+              <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>¿No tienes cuenta? </Text>
+                <TouchableOpacity onPress={onSwitchToSignUp}>
+                  <Text style={styles.signupLink}>Regístrate</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </View>
-        {errors.email && <Text style={styles.error}>{errors.email}</Text>}
-
-        {/* Password */}
-        <Text style={styles.label}>Contraseña</Text>
-        <View style={[styles.inputContainer, errors.password && styles.inputError]}>
-          <Lock size={18} color="#888" style={styles.icon} />
-          <TextInput
-            placeholder="********"
-            value={formData.password}
-            onChangeText={(t) => handleInputChange("password", t)}
-            style={styles.input}
-            secureTextEntry
-          />
-        </View>
-        {errors.password && <Text style={styles.error}>{errors.password}</Text>}
-
-        <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#000000ff" />
-          ) : (
-            <Text style={styles.buttonText}>Iniciar sesión</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.linksContainer}>
-          <TouchableOpacity onPress={onForgotPassword}>
-            <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onSwitchToSignUp}>
-            <Text style={styles.link}>
-              <Text style={{ color: "#111" }}>¿No tienes cuenta? </Text>
-              <Text style={styles.link}>Registrate</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+ container: {marginTop: 20,
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: '#F2F2F7',
   },
-  appTitle: {
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 16,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
     fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#000000ff",
+    fontWeight: 'bold',
+    color: '#000000',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    textAlign: "center",
-    color: "#666",
-    marginBottom: 24,
+    color: '#8E8E93',
+    textAlign: 'center',
   },
-  card: {
-    padding: 24,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+  form: {
+    gap: 16,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-    color: "#111",
+  errorAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFECEB',
+    padding: 12,
+    borderRadius: 8,
   },
-  description: {
+  errorText: {
+    color: '#FF3B30',
+    marginLeft: 8,
     fontSize: 14,
-    textAlign: "center",
-    color: "#666",
-    marginBottom: 24,
+  },
+  inputContainer: {
+    gap: 8,
   },
   label: {
     fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: "#333",
+    fontWeight: '500',
+    color: '#000000',
   },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: '#E5E5EA',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    height: 48,
-  },
-  inputError: {
-    borderColor: "red",
-  },
-  icon: {
-    marginRight: 8,
+    backgroundColor: '#F9F9F9',
   },
   input: {
     flex: 1,
+    padding: 12,
     fontSize: 16,
-    height: "100%",
   },
-  error: {
-    color: "red",
-    fontSize: 13,
-    marginBottom: 8,
+  inputIcon: {
+    marginLeft: 12,
   },
-  button: {
-    backgroundColor: "#000000ff",
-    paddingVertical: 14,
+  inputError: {
+    borderColor: '#FF3B30',
+  },
+  eyeButton: {
+    padding: 12,
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
     borderRadius: 8,
-    alignItems: "center",
-    marginTop: 16,
-    marginBottom: 24,
+    alignItems: 'center',
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
   },
   linksContainer: {
-    alignItems: "center",
+    alignItems: 'center',
+    gap: 12,
   },
-  link: {
-    color: "#2563eb",
+  linkText: {
+    color: '#007AFF',
     fontSize: 14,
-    marginVertical: 6,
+    fontWeight: '500',
+  },
+  signupContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  signupText: {
+    color: '#8E8E93',
+    fontSize: 14,
+  },
+  signupLink: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  successCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    margin: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#DDFFE6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#34C759',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  successMessage: {
+    fontSize: 16,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  successButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+  },
+  successButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -10,7 +10,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+ container: {marginTop: 20,
     flex: 1,
     justifyContent: "center",
     alignItems: "center",

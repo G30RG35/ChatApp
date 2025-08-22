@@ -11,7 +11,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+ container: {marginTop: 20,
     flex: 1,
     justifyContent: "center",
     backgroundColor: "#f0f4ff",

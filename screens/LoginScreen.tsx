@@ -20,5 +20,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#f0f4ff", // similar al diseño que me mostraste
     paddingHorizontal: 20,
+    marginTop: 20,
   },
 });
