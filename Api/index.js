@@ -22,7 +22,6 @@ app.get('/usuarios', async (req, res) => {
 
 app.get('/usuarios/:id', async (req, res) => {
   try {
-    console.log(req.params.id);
     await db.poolConnect;
     const result = await db.pool
       .request()
@@ -130,10 +129,19 @@ app.post('/cambiar-password', async (req, res) => {
 });
 
 // ---------- CONTACTOS ----------
+// ---------- CONTACTOS ----------
 app.get('/contactos/:userId', async (req, res) => {
-  const { userId } = req.params;
+  const userId = req.params.userId;
   const sqlQuery = `
-    SELECT c.id, c.contact_id, u.username AS name, u.email, u.avatar, c.nickname, c.created_at
+    SELECT 
+      c.id, 
+      c.contact_id, 
+      u.username AS name, 
+      u.email, 
+      u.avatar_url, 
+      c.nickname, 
+      c.is_favorite, 
+      c.created_at
     FROM contacts c
     JOIN users u ON u.id = c.contact_id
     WHERE c.user_id = @userId
@@ -142,7 +150,7 @@ app.get('/contactos/:userId', async (req, res) => {
     await db.poolConnect;
     const result = await db.pool
       .request()
-      .input('userId', db.sql.Int, userId)
+      .input('userId', db.sql.VarChar(36), userId)
       .query(sqlQuery);
     res.json(result.recordset);
   } catch (err) {
@@ -152,22 +160,75 @@ app.get('/contactos/:userId', async (req, res) => {
 });
 
 app.post('/contactos', async (req, res) => {
-  const { user_id, contact_id, nickname } = req.body;
+  const { user_id, contact_id, nickname, is_favorite } = req.body;
   if (!user_id || !contact_id)
     return res.status(400).json({ error: "Faltan datos requeridos" });
   try {
     await db.poolConnect;
+    const id = uuidv4();
     const result = await db.pool
       .request()
-      .input('user_id', db.sql.Int, user_id)
-      .input('contact_id', db.sql.Int, contact_id)
-      .input('nickname', db.sql.NVarChar, nickname || null)
+      .input('id', db.sql.VarChar(36), id)
+      .input('user_id', db.sql.VarChar(36), user_id)
+      .input('contact_id', db.sql.VarChar(36), contact_id)
+      .input('nickname', db.sql.VarChar(100), nickname || null)
+      .input('is_favorite', db.sql.Bit, is_favorite ? 1 : 0)
       .query(
-        'INSERT INTO contacts (user_id, contact_id, nickname) OUTPUT INSERTED.id VALUES (@user_id, @contact_id, @nickname)'
+        `INSERT INTO contacts (id, user_id, contact_id, nickname, is_favorite) 
+         OUTPUT INSERTED.id 
+         VALUES (@id, @user_id, @contact_id, @nickname, @is_favorite)`
       );
-    res.status(201).json({ id: result.recordset[0].id, user_id, contact_id, nickname });
+    res.status(201).json({ id, user_id, contact_id, nickname, is_favorite: !!is_favorite });
   } catch (err) {
+    if (err.originalError && err.originalError.info && err.originalError.info.number === 2627) {
+      // Unique constraint violation
+      return res.status(409).json({ error: "El contacto ya existe" });
+    }
     console.error('POST /contactos:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/contactos/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nickname, is_favorite } = req.body;
+  if (!nickname && typeof is_favorite === 'undefined')
+    return res.status(400).json({ error: "No hay datos para actualizar" });
+  try {
+    await db.poolConnect;
+    const request = db.pool.request().input('id', db.sql.VarChar(36), id);
+    let setClauses = [];
+    if (nickname !== undefined) {
+      request.input('nickname', db.sql.VarChar(100), nickname);
+      setClauses.push('nickname = @nickname');
+    }
+    if (typeof is_favorite !== 'undefined') {
+      request.input('is_favorite', db.sql.Bit, is_favorite ? 1 : 0);
+      setClauses.push('is_favorite = @is_favorite');
+    }
+    if (setClauses.length === 0) {
+      return res.status(400).json({ error: "No hay datos para actualizar" });
+    }
+    const sql = `UPDATE contacts SET ${setClauses.join(', ')} WHERE id = @id`;
+    await request.query(sql);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('PATCH /contactos/:id:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/contactos/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.poolConnect;
+    await db.pool
+      .request()
+      .input('id', db.sql.VarChar(36), id)
+      .query('DELETE FROM contacts WHERE id = @id');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /contactos/:id:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -211,7 +272,7 @@ app.post('/mensajes', async (req, res) => {
 
 // ---------- CONVERSACIONES ----------
 app.get('/conversaciones/:userId', async (req, res) => {
-  const { userId } = req.params;
+  const { userId } = req.params.id;
   const sqlQuery = `
     SELECT c.id, c.tipo, c.created_at, cm.mensaje_id, m.contenido AS ultimo_mensaje
     FROM conversaciones c

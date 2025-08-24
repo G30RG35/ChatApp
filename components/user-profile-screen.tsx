@@ -51,9 +51,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
-      console.log("Cargando perfil...");
       const data = await api.get(`/usuarios/${userId}`);
-      console.log("Perfil ", data)
       setProfile(data);
     } catch {
       setErrors({ general: t("profile.loadError", "No se pudo cargar el perfil") });
