@@ -11,9 +11,11 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/utils'; // Importa tu helper de API
 
 interface ChangePasswordScreenProps {
   onBack: () => void;
+  userEmail: string; // <-- Asegúrate de pasar el email del usuario autenticado
 }
 
 interface FormData {
@@ -29,7 +31,7 @@ interface FormErrors {
   general?: string;
 }
 
-export function ChangePasswordScreen({ onBack }: ChangePasswordScreenProps) {
+export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreenProps) {
   const [formData, setFormData] = useState<FormData>({
     currentPassword: "",
     newPassword: "",
@@ -84,18 +86,22 @@ export function ChangePasswordScreen({ onBack }: ChangePasswordScreenProps) {
     setErrors({});
 
     try {
-      // Simular llamada a API
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Llama al endpoint del backend para cambiar contraseña
+      const res = await api.post("/cambiar-password", {
+        email: userEmail,
+        oldPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+      });
 
-      // Simular validación de contraseña actual
-      if (formData.currentPassword !== "password123") {
-        setErrors({ currentPassword: "La contraseña actual es incorrecta" });
-        return;
+      if (res && res.message) {
+        setIsSuccess(true);
+      } else {
+        setErrors({
+          general: res.error || "Error al cambiar la contraseña. Inténtalo de nuevo.",
+        });
       }
-
-      setIsSuccess(true);
     } catch (error) {
-      setErrors({ general: "Error al cambiar la contraseña. Inténtalo de nuevo." });
+      setErrors({ general: "Error de red. Inténtalo de nuevo." });
     } finally {
       setIsLoading(false);
     }

@@ -14,7 +14,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { api } from "../utils/utils"; // Importa tu helper de API
+import { api } from "../utils/utils";
 
 export interface Contact {
   id: string;
@@ -29,7 +29,7 @@ export interface Contact {
 export function ContactsScreen({
   onStartChat,
   onVoiceCall,
-  userId, // <-- Asegúrate de pasar el userId del usuario autenticado
+  userId,
 }: {
   onStartChat: (contact: Contact) => void;
   onVoiceCall: (contact: Contact) => void;
@@ -52,14 +52,13 @@ export function ContactsScreen({
     setLoading(true);
     try {
       const data = await api.get(`/contactos/${userId}`);
-      // El backend devuelve: id, contact_id, name, email, avatar, nickname, created_at
       setContacts(
         data.map((c: any) => ({
           id: c.contact_id,
           name: c.name,
           avatar: c.avatar || "https://placehold.co/100x100",
-          phone: c.email, // O usa otro campo si tienes el teléfono
-          status: "offline", // Puedes ajustar esto si tienes el estado real
+          phone: c.email,
+          status: "offline", // Ajusta si tienes estado real
         }))
       );
     } catch {
@@ -69,22 +68,27 @@ export function ContactsScreen({
     }
   };
 
+  // Buscar usuario por username o email
+  const findUser = async (usernameOrEmail: string) => {
+    const users = await api.get(`/usuarios`);
+    return users.find(
+      (u: any) =>
+        u.username.toLowerCase() === usernameOrEmail.trim().toLowerCase() ||
+        u.email === usernameOrEmail.trim()
+    );
+  };
+
   // Agregar contacto usando el endpoint del backend
   const handleAddContact = async () => {
     if (!newName.trim() || !newPhone.trim()) {
-      setError("Nombre y número son requeridos");
+      setError("Nombre y número/email son requeridos");
       return;
     }
     try {
-      // Buscar el usuario por email o teléfono (deberías tener un endpoint para esto)
-      const users = await api.get(`/usuarios`);
-      const found = users.find(
-        (u: any) =>
-          u.username.toLowerCase() === newName.trim().toLowerCase() ||
-          u.email === newPhone.trim() // O compara con el campo correcto
-      );
+      // Buscar el usuario por nombre de usuario o email
+      const found = (await findUser(newName.trim())) || (await findUser(newPhone.trim()));
       if (!found) {
-        setError("No existe un usuario con ese nombre o número/email");
+        setError("No existe un usuario con ese nombre o email");
         return;
       }
       // Llama al endpoint para agregar contacto
