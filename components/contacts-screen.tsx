@@ -82,22 +82,27 @@ export function ContactsScreen({
 
   // Agregar contacto usando el endpoint del backend
   const handleAddContact = async () => {
-    if (!newName.trim() || !newPhone.trim()) {
-      setError(t("contacts.requiredFields", "Nombre y número/email son requeridos"));
+    if (!newName.trim() && !newPhone.trim()) {
+      setError(t("contacts.requiredFields", "Nombre o email/número requerido"));
       return;
     }
     try {
       // Buscar el usuario por nombre de usuario o email
-      const found = (await findUser(newName.trim())) || (await findUser(newPhone.trim()));
+      const found = await findUser(newName.trim() || newPhone.trim());
       if (!found) {
         setError(t("contacts.notFound", "No existe un usuario con ese nombre o email"));
+        return;
+      }
+      if (found.id === userId) {
+        setError(t("contacts.cantAddSelf", "No puedes agregarte a ti mismo"));
         return;
       }
       // Llama al endpoint para agregar contacto
       const res = await api.post("/contactos", {
         user_id: userId,
         contact_id: found.id,
-        nickname: newName.trim(),
+        nickname: newName.trim() || found.username,
+        is_favorite: false,
       });
       if (res.error) {
         setError(res.error);
