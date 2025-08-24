@@ -73,6 +73,16 @@ export function SignUpForm({
       });
       if (data && data.id) {
         setUser(data); // Guarda el usuario globalmente
+
+        // 1. ENVÍA EL CÓDIGO DE VERIFICACIÓN
+        const codeRes = await api.post("/enviar-codigo", { email });
+        if (!codeRes.success) {
+          setErrors({ general: codeRes.error || t("signUp.error", "No se pudo enviar el código de verificación.") });
+          setIsLoading(false);
+          return;
+        }
+
+        // 2. CONTINÚA EL FLUJO NORMAL
         onAuthSuccess(data.email); // O pasa el objeto completo si lo necesitas
       } else {
         setErrors({ general: data.error || t("signUp.error", "Error al crear la cuenta. Inténtalo de nuevo.") });

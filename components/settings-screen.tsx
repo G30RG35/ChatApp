@@ -28,6 +28,7 @@ interface UserProfile {
   email: string;
   avatar?: string;
   status?: string;
+  is_verified: boolean;
 }
 
 export function SettingsScreen({
@@ -202,6 +203,16 @@ export function SettingsScreen({
             ))}
           </View>
         ))}
+
+        {/* Indicador de verificación */}
+        {profile?.is_verified && (
+          <View style={styles.verifiedContainer}>
+            <Ionicons name="checkmark-circle" size={18} color="#22c55e" />
+            <Text style={styles.verifiedText}>
+              {t("settings.verified", "Usuario verificado")}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -280,4 +291,20 @@ const styles = StyleSheet.create({
   },
   itemTitle: { fontSize: 14, fontWeight: "600", color: "#111827" },
   itemDescription: { fontSize: 12, color: "#6b7280" },
+  verifiedContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    alignSelf: "flex-start",
+    backgroundColor: "#e0fbe6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
+  },
+  verifiedText: {
+    color: "#15803d",
+    fontWeight: "600",
+    fontSize: 13,
+  },
 });

@@ -403,29 +403,68 @@ app.post('/llamadas', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ---------- EMAIL CÓDIGOS (mejorado) ----------
 
-// ---------- EMAIL CÓDIGOS (sin cambios, solo ejemplo) ----------
+// Genera un código aleatorio de 6 dígitos
+function generarCodigo() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 app.post('/enviar-codigo', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Falta el email" });
 
+  const codigo = generarCodigo();
+  const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'tu-correo@gmail.com',
-      pass: 'tu-contraseña'
+      user: process.env.correo,
+      pass: process.env.pass
     }
   });
 
   const mailOptions = {
-    from: 'tu-correo@gmail.com',
+    from: process.env.correo,
     to: email,
     subject: 'Código de verificación',
-    text: 'Tu código de verificación es: 123456'
+    text: `Tu código de verificación es: ${codigo}`
   };
 
   try {
     await transporter.sendMail(mailOptions);
+
+    // Guarda el código en la base de datos (en la tabla users, si existe el usuario, actualiza; si no, inserta provisional)
+    await db.poolConnect;
+    // Busca si ya existe un usuario con ese email
+    const existe = await db.pool
+      .request()
+      .input('email', db.sql.VarChar(255), email)
+      .query('SELECT id FROM users WHERE email = @email');
+    if (existe.recordset.length > 0) {
+      // Actualiza el código y expiración
+      await db.pool
+        .request()
+        .input('email', db.sql.VarChar(255), email)
+        .input('verification_code', db.sql.VarChar(10), codigo)
+        .input('verification_expires', db.sql.DateTime, expires)
+        .query('UPDATE users SET verification_code = @verification_code, verification_expires = @verification_expires WHERE email = @email');
+    } else {
+      // Inserta usuario provisional solo con email y código
+      const id = uuidv4();
+      await db.pool
+        .request()
+        .input('id', db.sql.VarChar(36), id)
+        .input('email', db.sql.VarChar(255), email)
+        .input('verification_code', db.sql.VarChar(10), codigo)
+        .input('verification_expires', db.sql.DateTime, expires)
+        .query(
+          `INSERT INTO users (id, email, verification_code, verification_expires, is_verified, created_at, updated_at)
+           VALUES (@id, @email, @verification_code, @verification_expires, 0, GETDATE(), GETDATE())`
+        );
+    }
+
     res.json({ success: true, message: "Código enviado" });
   } catch (err) {
     console.error('POST /enviar-codigo:', err);
@@ -433,40 +472,48 @@ app.post('/enviar-codigo', async (req, res) => {
   }
 });
 
-app.post('/verificar-email', (req, res) => {
+app.post('/verificar-email', async (req, res) => {
   const { email, code } = req.body;
-  if (code === "123456") {
-    return res.json({ success: true });
+  console.log(req.body);
+  if (!email || !code) return res.status(400).json({ error: "Faltan datos requeridos" });
+
+  try {
+    await db.poolConnect;
+    const result = await db.pool
+      .request()
+      .input('email', db.sql.VarChar(255), email)
+      .input('code', db.sql.VarChar(10), code)
+      .query(
+        `SELECT id, verification_expires FROM users WHERE email = @email AND verification_code = @code`
+      );
+    if (result.recordset.length === 0)
+      return res.status(400).json({ success: false, error: "Código incorrecto" });
+
+    const expires = result.recordset[0].verification_expires;
+    if (expires && new Date() > expires)
+      return res.status(400).json({ success: false, error: "Código expirado" });
+
+    // Marca como verificado
+    await db.pool
+      .request()
+      .input('email', db.sql.VarChar(255), email)
+      .query('UPDATE users SET is_verified = 1 WHERE email = @email');
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('POST /verificar-email:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
-  res.status(400).json({ success: false, error: "Código incorrecto" });
 });
 
 app.post('/reenviar-codigo', async (req, res) => {
-  const { oldEmail, newEmail } = req.body;
-  if (!oldEmail || !newEmail) return res.status(400).json({ error: "Faltan emails requeridos" });
+  const { email } = req.body;
+  console.log(req.body);
+  if (!email) return res.status(400).json({ error: "Falta el email" });
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: 'correo@gmail.com',
-      pass: 'contraseña'
-    }
-  });
-
-  const mailOptions = {
-    from: 'tu-correo@gmail.com',
-    to: newEmail,
-    subject: 'Reenvío de código de verificación',
-    text: 'Tu código de verificación es: 123456'
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    res.json({ success: true, message: "Código reenviado al nuevo correo" });
-  } catch (err) {
-    console.error('POST /reenviar-codigo:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
+  // Simplemente reutiliza la lógica de enviar-codigo
+  req.body = { email };
+  app._router.handle(req, res, () => {}, 'post', '/enviar-codigo');
 });
 
 // Iniciar servidor
