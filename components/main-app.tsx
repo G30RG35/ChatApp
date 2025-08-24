@@ -291,7 +291,7 @@ export function MainApp({ onLogout }: MainAppProps) {
           />
         );
       case "changePassword":
-        return <ChangePasswordScreen onBack={handleBackToSettings} userEmail={"user@example.com"} />;
+        return <ChangePasswordScreen onBack={handleBackToSettings} userEmail={user?.email} />;
       case "profile":
         return <UserProfileScreen userId={user?.id} onBack={handleBackToSettings} />;
       case "language":

@@ -109,6 +109,7 @@ app.post('/cambiar-password', async (req, res) => {
     return res.status(400).json({ error: "Faltan datos requeridos" });
   try {
     await db.poolConnect;
+    // Verifica que el usuario y la contraseña actual sean correctos
     const result = await db.pool
       .request()
       .input('email', db.sql.VarChar(255), email)
@@ -116,6 +117,7 @@ app.post('/cambiar-password', async (req, res) => {
       .query('SELECT id FROM users WHERE email = @email AND password_hash = @oldPassword');
     if (result.recordset.length === 0)
       return res.status(401).json({ error: "Contraseña anterior incorrecta" });
+    // Actualiza la contraseña
     await db.pool
       .request()
       .input('newPassword', db.sql.VarChar(255), newPassword)
