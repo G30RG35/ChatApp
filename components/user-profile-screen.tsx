@@ -24,7 +24,11 @@ interface ProfileData {
   id: string;
   username: string;
   email: string;
-  avatar?: string;
+  first_name: string;
+  last_name: string;
+  avatar_url?: string;
+  phone_number?: string;
+  bio?: string;
 }
 
 interface FormErrors {
@@ -47,7 +51,9 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
+      console.log("Cargando perfil...");
       const data = await api.get(`/usuarios/${userId}`);
+      console.log("Perfil ", data)
       setProfile(data);
     } catch {
       setErrors({ general: t("profile.loadError", "No se pudo cargar el perfil") });
@@ -56,44 +62,29 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
     }
   };
 
+  // Aquí puedes implementar la actualización del perfil si lo deseas
   const handleSubmit = async () => {
-    if (!profile?.username?.trim() || !profile?.email?.trim()) {
-      setErrors({ general: t("profile.required", "El nombre de usuario y el email son requeridos") });
-      return;
-    }
-
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      // Simular llamada a API
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      setIsSuccess(true);
-
-      // Volver automáticamente después de 2 segundos
-      setTimeout(() => {
-        setIsSuccess(false);
-        onBack();
-      }, 2000);
-    } catch (error) {
-      setErrors({ general: t("profile.updateError", "Error al actualizar el perfil. Inténtalo de nuevo.") });
-    } finally {
-      setIsLoading(false);
-    }
+    setIsSuccess(true);
+    setTimeout(() => {
+      setIsSuccess(false);
+      onBack();
+    }, 2000);
   };
 
   const AvatarComponent = () => {
-    const initials = `${profile?.username?.[0] || ""}`;
+    const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
     return (
       <View style={styles.avatar}>
-        <Image
-          source={{ uri: profile?.avatar || "https://placekitten.com/80/80" }}
-          style={styles.avatarImage}
-        />
-        <View style={styles.avatarFallback}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        {profile?.avatar_url ? (
+          <Image
+            source={{ uri: profile.avatar_url }}
+            style={styles.avatarImage}
+          />
+        ) : (
+          <View style={styles.avatarFallback}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -107,7 +98,6 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t("profile.title", "Perfil")}</Text>
         </View>
-
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={64} color="#34C759" />
@@ -189,88 +179,69 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
             {t("profile.personalInfoDesc", "Esta información será visible para tus contactos")}
           </Text>
 
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, styles.halfInput]}>
-              <Text style={styles.label}>{t("profile.name", "Nombre")}</Text>
-              <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
-                <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={profile.username}
-                  onChangeText={(value) =>
-                    setProfile((prev) =>
-                      prev
-                        ? { ...prev, username: value }
-                        : { id: "", username: value, email: "" }
-                    )
-                  }
-                  placeholder={t("profile.namePlaceholder", "Nombre de usuario")}
-                  editable={false}
-                />
-              </View>
-              {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>{t("profile.name", "Nombre")}</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={profile.first_name}
+                editable={false}
+                placeholder={t("profile.namePlaceholder", "Nombre")}
+              />
             </View>
+          </View>
 
-            <View style={[styles.inputContainer, styles.halfInput]}>
-              <Text style={styles.label}>{t("profile.lastname", "Apellido")}</Text>
-              <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
-                <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={profile.username}
-                  onChangeText={(value) =>
-                    setProfile((prev) =>
-                      prev
-                        ? { ...prev, email: value }
-                        : { id: "", username: "", email: value }
-                    )
-                  }
-                  placeholder={t("profile.lastnamePlaceholder", "Apellido")}
-                  editable={false}
-                />
-              </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>{t("profile.lastname", "Apellido")}</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={profile.last_name}
+                editable={false}
+                placeholder={t("profile.lastnamePlaceholder", "Apellido")}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Username</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person-circle" size={20} color="#8E8E93" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={profile.username}
+                editable={false}
+                placeholder="Username"
+              />
             </View>
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
-            <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
+            <View style={styles.inputWrapper}>
               <Ionicons name="mail" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={profile.email}
-                onChangeText={(value) =>
-                  setProfile((prev) =>
-                    prev
-                      ? { ...prev, email: value }
-                      : { id: "", username: "", email: value }
-                  )
-                }
+                editable={false}
                 placeholder="Email"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={false}
               />
             </View>
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t("profile.bio", "Biografía")}</Text>
             <TextInput
               style={[styles.textArea, styles.input]}
-              value={profile.username}
-              onChangeText={(value) =>
-                setProfile((prev) =>
-                  prev
-                    ? { ...prev, email: value }
-                    : { id: "", username: "", email: value }
-                )
-              }
+              value={profile.bio || ""}
+              editable={false}
               placeholder={t("profile.bioPlaceholder", "Cuéntanos algo sobre ti...")}
               multiline
               numberOfLines={3}
-              editable={false}
             />
           </View>
         </View>
@@ -278,24 +249,16 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
         {/* Contact Information */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("profile.contactInfo", "Información de contacto")}</Text>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t("profile.phone", "Teléfono")}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="call" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                value={profile.username}
-                onChangeText={(value) =>
-                  setProfile((prev) =>
-                    prev
-                      ? { ...prev, email: value }
-                      : { id: "", username: "", email: value }
-                  )
-                }
+                value={profile.phone_number || ""}
+                editable={false}
                 placeholder={t("profile.phonePlaceholder", "Teléfono")}
                 keyboardType="phone-pad"
-                editable={false}
               />
             </View>
           </View>

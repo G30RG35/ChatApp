@@ -23,6 +23,7 @@ import { CreateGroupScreen } from "./create-group-screen";
 import { VideoCallScreen } from "./video-call-screen";
 import { IncomingCallScreen } from "./incoming-call-screen";
 import { ContactsScreen } from "./contacts-screen";
+import { useUser } from "../context/UserContext";
 
 type Screen =
   | "home"
@@ -59,6 +60,7 @@ interface MainAppProps {
 }
 
 export function MainApp({ onLogout }: MainAppProps) {
+    const { user } = useUser();
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -273,6 +275,7 @@ export function MainApp({ onLogout }: MainAppProps) {
       onVoiceCall={(contact) =>
         handleVideoCall(contact.name, contact.avatar)
       }
+      userId={user?.id}
     />
   );
       case "settings":
@@ -284,12 +287,13 @@ export function MainApp({ onLogout }: MainAppProps) {
             onOpenLanguage={handleOpenLanguage}
             currentLanguage={currentLanguage}
             onOpenLanguageModal={handleOpenLanguageModal}
+            userId={user?.id}
           />
         );
       case "changePassword":
-        return <ChangePasswordScreen onBack={handleBackToSettings} />;
+        return <ChangePasswordScreen onBack={handleBackToSettings} userEmail={"user@example.com"} />;
       case "profile":
-        return <UserProfileScreen onBack={handleBackToSettings} />;
+        return <UserProfileScreen userId={user?.id} onBack={handleBackToSettings} />;
       case "language":
         return (
           <LanguageSelectionScreen
@@ -310,6 +314,9 @@ export function MainApp({ onLogout }: MainAppProps) {
             onVoiceCall={() =>
               console.log("Voice call with", selectedContact.name)
             }
+            conversacionId={`conv-${selectedContact.id}`}
+            userId={user?.id}
+            contactId={selectedContact.id}
           />
         ) : (
           <HomeScreen onNewChat={handleNewChat} onStartChat={handleStartChat} />

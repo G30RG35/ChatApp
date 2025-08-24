@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../utils/utils";
 import { useTranslation } from "react-i18next";
+import { useUser } from "../context/UserContext";
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -41,6 +42,7 @@ export function SettingsScreen({
   const { t, i18n } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useUser();
 
   // Obtener datos del usuario al montar
   useEffect(() => {
@@ -50,7 +52,7 @@ export function SettingsScreen({
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const data = await api.get(`/usuarios/${userId}`);
+      const data = await api.get(`/usuarios/${user.id}`);
       setProfile(data);
     } catch {
       Alert.alert(

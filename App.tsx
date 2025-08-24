@@ -16,6 +16,7 @@ import { MainApp } from './components/main-app';
 import './i18n'; // importa la configuración
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
+import { UserProvider } from "./context/UserContext";
 
 export default function HomePage() {
   const [currentView, setCurrentView] = useState<
@@ -42,10 +43,6 @@ export default function HomePage() {
     setCurrentView("signIn");
   };
 
-  if (isAuthenticated) {
-    return <MainApp onLogout={handleLogout} />;
-  }
-
   const getSubtitle = () => {
     switch (currentView) {
       case "signUp":
@@ -65,51 +62,59 @@ export default function HomePage() {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>ChatApp</Text>
-              <Text style={styles.subtitle}>{getSubtitle()}</Text>
-            </View>
+      <UserProvider>
+        {isAuthenticated ? (
+          <MainApp onLogout={handleLogout} />
+        ) : (
+          <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              <View style={styles.content}>
+                {/* Header */}
+                <View style={styles.header}>
+                  <Text style={styles.title}>ChatApp</Text>
+                  <Text style={styles.subtitle}>{getSubtitle()}</Text>
+                </View>
 
-            {/* Forms */}
-            <View style={styles.formContainer}>
-              {currentView === "signUp" && (
-                <SignUpForm 
-                  onSwitchToSignIn={() => setCurrentView("signIn")} 
-                  onAuthSuccess={handleSignUpSuccess} 
-                />
-              )}
+                {/* Forms */}
+                <View style={styles.formContainer}>
+                  {currentView === "signUp" && (
+                    <SignUpForm 
+                      onSwitchToSignIn={() => setCurrentView("signIn")} 
+                      onAuthSuccess={handleSignUpSuccess} 
+                    />
+                  )}
 
-              {currentView === "signIn" && (
-                <SignInForm
-                  onSwitchToSignUp={() => setCurrentView("signUp")}
-                  onSwitchToForgotPassword={() => setCurrentView("forgotPassword")}
-                  onAuthSuccess={handleAuthSuccess}
-                />
-              )}
+                  {currentView === "signIn" && (
+                    <SignInForm
+                      onSwitchToSignUp={() => setCurrentView("signUp")}
+                      onSwitchToForgotPassword={() => setCurrentView("forgotPassword")}
+                      onAuthSuccess={(user) => {
+                        setIsAuthenticated(true);
+                      }}
+                    />
+                  )}
 
-              {currentView === "forgotPassword" && (
-                <ForgotPasswordForm onBackToSignIn={() => setCurrentView("signIn")} />
-              )}
+                  {currentView === "forgotPassword" && (
+                    <ForgotPasswordForm onBackToSignIn={() => setCurrentView("signIn")} />
+                  )}
 
-              {currentView === "emailVerification" && (
-                <EmailVerificationScreen
-                  email={userEmail}
-                  onBackToSignUp={() => setCurrentView("signUp")}
-                  onVerificationSuccess={handleVerificationSuccess}
-                />
-              )}
+                  {currentView === "emailVerification" && (
+                    <EmailVerificationScreen
+                      email={userEmail}
+                      onBackToSignUp={() => setCurrentView("signUp")}
+                      onVerificationSuccess={handleVerificationSuccess}
+                    />
+                  )}
 
-              {currentView === "verificationSuccess" && (
-                <VerificationSuccess onContinue={handleAuthSuccess} />
-              )}
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+                  {currentView === "verificationSuccess" && (
+                    <VerificationSuccess onContinue={handleAuthSuccess} />
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        )}
+      </UserProvider>
     </I18nextProvider>
   );
 }

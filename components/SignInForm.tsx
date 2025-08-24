@@ -12,6 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
+import { useUser } from '../context/UserContext';
+
 
 interface FormData {
   email: string;
@@ -36,6 +38,9 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
     email: "",
     password: "",
   });
+
+    const { setUser } = useUser();
+
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -81,7 +86,8 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
       if (data && data.id) {
         setIsSuccess(true);
         setTimeout(() => {
-          onAuthSuccess(data);
+          setUser(data);
+          onAuthSuccess(data); // <-- Esto está bien
         }, 800);
       } else {
         setErrors({ general: data.error || t("signIn.invalid", "Email o contraseña incorrectos. Inténtalo de nuevo.") });

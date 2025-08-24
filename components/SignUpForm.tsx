@@ -11,6 +11,7 @@ import {
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { api } from "../utils/utils";
 import { useTranslation } from "react-i18next";
+import { useUser } from "../context/UserContext";
 
 interface SignUpFormProps {
   onSwitchToSignIn: () => void;
@@ -22,6 +23,7 @@ export function SignUpForm({
   onAuthSuccess,
 }: SignUpFormProps) {
   const { t } = useTranslation();
+  const { setUser } = useUser();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,17 +66,17 @@ export function SignUpForm({
     setErrors({});
 
     try {
-      // const data = await api.post("/usuarios", {
-      //   username,
-      //   email,
-      //   password,
-      // });
-      // if (data && data.id) {
-      //   onAuthSuccess(email);
-      // } else {
-      //   setErrors({ general: data.error || t("signUp.error", "Error al crear la cuenta. Inténtalo de nuevo.") });
-      // }
-      onAuthSuccess(email);
+      const data = await api.post("/usuarios", {
+        username,
+        email,
+        password,
+      });
+      if (data && data.id) {
+        setUser(data); // Guarda el usuario globalmente
+        onAuthSuccess(data.email); // O pasa el objeto completo si lo necesitas
+      } else {
+        setErrors({ general: data.error || t("signUp.error", "Error al crear la cuenta. Inténtalo de nuevo.") });
+      }
     } catch {
       setErrors({ general: t("signUp.networkError", "Error de red. Inténtalo de nuevo.") });
     } finally {
