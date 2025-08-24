@@ -272,28 +272,49 @@ app.post('/mensajes', async (req, res) => {
 
 // ---------- CONVERSACIONES ----------
 app.get('/conversaciones/:userId', async (req, res) => {
-  const { userId } = req.params.id;
+  const userId = req.params.userId;
   const sqlQuery = `
-    SELECT c.id, c.tipo, c.created_at, cm.mensaje_id, m.contenido AS ultimo_mensaje
-    FROM conversaciones c
-    LEFT JOIN (
-      SELECT conversacion_id, MAX(id) AS mensaje_id
-      FROM mensajes
-      GROUP BY conversacion_id
-    ) cm ON c.id = cm.conversacion_id
-    LEFT JOIN mensajes m ON m.id = cm.mensaje_id
-    WHERE c.id IN (
-      SELECT conversacion_id FROM participantes_conversacion WHERE usuario_id = @userId
-    )
-    ORDER BY c.created_at DESC
+    SELECT
+  c.id AS conversation_id,
+  c.name,
+  c.is_group,
+  c.updated_at,
+  m.id AS last_message_id,
+  m.content AS last_message,
+  m.created_at AS last_message_time,
+  u.username AS last_sender_username,
+  -- NUEVO: nombre del contacto (para chats privados)
+  (
+    SELECT TOP 1 u2.username
+    FROM conversation_participants cp2
+    JOIN users u2 ON u2.id = cp2.user_id
+    WHERE cp2.conversation_id = c.id AND cp2.user_id <> @userId
+  ) AS contact_username,
+  (
+    SELECT TOP 1 u2.avatar_url
+    FROM conversation_participants cp2
+    JOIN users u2 ON u2.id = cp2.user_id
+    WHERE cp2.conversation_id = c.id AND cp2.user_id <> @userId
+  ) AS contact_avatar
+FROM conversations c
+INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+LEFT JOIN messages m ON m.id = (
+  SELECT TOP 1 id FROM messages
+  WHERE conversation_id = c.id
+  ORDER BY created_at DESC
+)
+LEFT JOIN users u ON u.id = m.sender_id
+WHERE cp.user_id = @userId
+ORDER BY c.updated_at DESC
   `;
   try {
     await db.poolConnect;
     const result = await db.pool
       .request()
-      .input('userId', db.sql.Int, userId)
+      .input('userId', db.sql.VarChar(36), userId)
       .query(sqlQuery);
     res.json(result.recordset);
+    console.log(result.recordset);
   } catch (err) {
     console.error('GET /conversaciones/:userId:', err);
     res.status(500).json({ error: err.message });

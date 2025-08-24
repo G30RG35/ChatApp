@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,9 +10,12 @@ import {
   SafeAreaView,
   FlatList,
   Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
+  ActivityIndicator,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import { api } from "../utils/utils";
+import { useUser } from "../context/UserContext";
 
 interface Conversation {
   id: string;
@@ -37,52 +40,47 @@ interface HomeScreenProps {
   onStartChat?: (contact: Contact) => void;
 }
 
-const mockConversations: Conversation[] = [
-  {
-    id: "1",
-    name: "Ana García",
-    avatar: "https://placekitten.com/40/40",
-    lastMessage: "¡Hola! ¿Cómo estás?",
-    timestamp: "10:30",
-    unreadCount: 2,
-    isOnline: true,
-  },
-  {
-    id: "2",
-    name: "Carlos López",
-    avatar: "https://placekitten.com/40/40",
-    lastMessage: "Perfecto, nos vemos mañana",
-    timestamp: "09:15",
-    unreadCount: 0,
-    isOnline: false,
-  },
-  {
-    id: "3",
-    name: "María Rodríguez",
-    avatar: "https://placekitten.com/40/40",
-    lastMessage: "¿Tienes los documentos listos?",
-    timestamp: "Ayer",
-    unreadCount: 1,
-    isOnline: true,
-  },
-  {
-    id: "4",
-    name: "Equipo Desarrollo",
-    avatar: "https://placekitten.com/40/40",
-    lastMessage: "La reunión es a las 3 PM",
-    timestamp: "Ayer",
-    unreadCount: 5,
-    isOnline: false,
-  },
-];
-
 export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
   const { t } = useTranslation();
+  const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [chats, setChats] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredConversations = mockConversations.filter((conversation) =>
-    conversation.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  useEffect(() => {
+    fetchChats();
+  }, []);
+
+  const fetchChats = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get(`/conversaciones/${user.id}`);
+      const mappedChats = data.map((item: any) => ({
+        id: item.conversation_id,
+        name: item.is_group
+          ? item.name || "Grupo"
+          : item.contact_username || "Chat",
+        avatar: item.is_group
+          ? ""
+          : item.contact_avatar || "",
+        lastMessage: item.last_message || "",
+        timestamp: item.last_message_time
+          ? new Date(item.last_message_time).toLocaleString()
+          : "",
+        unreadCount: 0,
+        isOnline: false,
+      }));
+      setChats(mappedChats);
+    } catch (e) {
+      console.log("Error al obtener chats:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredConversations = chats.filter((conversation) =>
+    conversation?.name?.toLowerCase()?.includes(searchQuery?.toLowerCase())
   );
 
   const handleConversationClick = (conversation: Conversation) => {
@@ -104,21 +102,39 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
     }, 1000);
   };
 
-  const AvatarComponent = ({ name, avatar, size = 48 }: { name: string, avatar?: string, size?: number }) => {
+  const AvatarComponent = ({
+    name,
+    avatar,
+    size = 48,
+  }: {
+    name: string;
+    avatar?: string;
+    size?: number;
+  }) => {
     const initials = name
       .split(" ")
       .map((n) => n[0])
       .join("");
-    
+
     return (
-      <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
+      <View
+        style={[
+          styles.avatar,
+          { width: size, height: size, borderRadius: size / 2 },
+        ]}
+      >
         {avatar ? (
-          <Image 
-            source={{ uri: avatar }} 
-            style={[styles.avatarImage, { width: size, height: size, borderRadius: size / 2 }]} 
+          <Image
+            source={{ uri: avatar }}
+            style={[
+              styles.avatarImage,
+              { width: size, height: size, borderRadius: size / 2 },
+            ]}
           />
         ) : (
-          <Text style={[styles.avatarFallback, { fontSize: size * 0.4 }]}>{initials}</Text>
+          <Text
+            style={[styles.avatarFallback, { fontSize: size * 0.4 }]}
+          >{initials}</Text>
         )}
       </View>
     );
@@ -136,11 +152,15 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
 
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
-          <Text style={styles.conversationName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.conversationName} numberOfLines={1}>
+            {item.name}
+          </Text>
           <Text style={styles.timestamp}>{item.timestamp}</Text>
         </View>
         <View style={styles.conversationFooter}>
-          <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
+          <Text style={styles.lastMessage} numberOfLines={1}>
+            {item.lastMessage}
+          </Text>
           {item.unreadCount > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadCount}>{item.unreadCount}</Text>
@@ -154,10 +174,18 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="chatbubble-outline" size={64} color="#C7C7CC" />
-      <Text style={styles.emptyStateTitle}>{t("home.emptyTitle", "No hay conversaciones")}</Text>
-      <Text style={styles.emptyStateText}>{t("home.emptyText", "Inicia una nueva conversación para comenzar")}</Text>
+      <Text style={styles.emptyStateTitle}>
+        {t("home.emptyTitle", "No hay conversaciones")}
+      </Text>
+      <Text style={styles.emptyStateText}>
+        {t("home.emptyText", "Inicia una nueva conversación para comenzar")}
+      </Text>
     </View>
   );
+
+  if (loading) {
+    return <ActivityIndicator />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -167,17 +195,26 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
           <View style={styles.logo}>
             <Ionicons name="chatbubble" size={24} color="#FFFFFF" />
           </View>
-          <Text style={styles.headerTitle}>{t("home.title", "Mensajes")}</Text>
+          <Text style={styles.headerTitle}>
+            {t("home.title", "Mensajes")}
+          </Text>
         </View>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
+          <Ionicons
+            name="search"
+            size={20}
+            color="#8E8E93"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
-            placeholder={t("home.searchPlaceholder", "Buscar conversaciones...")}
+            placeholder={
+              t("home.searchPlaceholder", "Buscar conversaciones...")
+            }
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#8E8E93"
@@ -191,8 +228,8 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
         renderItem={renderConversationItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={
-          filteredConversations.length === 0 
-            ? styles.emptyListContainer 
+          filteredConversations.length === 0
+            ? styles.emptyListContainer
             : styles.listContentContainer
         }
         ListEmptyComponent={renderEmptyState}
@@ -211,35 +248,36 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
 }
 
 const styles = StyleSheet.create({
- container: {marginTop: 20,
+  container: {
+    marginTop: 20,
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: "#E5E5EA",
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   logo: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: "600",
+    color: "#000000",
   },
   headerButton: {
     padding: 8,
@@ -247,12 +285,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: "#E5E5EA",
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F2F2F7',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F2F2F7",
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -263,7 +301,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#000000',
+    color: "#000000",
   },
   list: {
     flex: 1,
@@ -273,117 +311,117 @@ const styles = StyleSheet.create({
   },
   emptyListContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: Dimensions.get('window').height * 0.6,
+    justifyContent: "center",
+    alignItems: "center",
+    height: Dimensions.get("window").height * 0.6,
   },
   conversationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: "#F2F2F7",
   },
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
     marginRight: 16,
   },
   avatar: {
-    backgroundColor: '#E1E1E6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#E1E1E6",
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatarImage: {
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
   avatarFallback: {
-    color: '#007AFF',
-    fontWeight: '600',
+    color: "#007AFF",
+    fontWeight: "600",
   },
   onlineIndicator: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
     width: 16,
     height: 16,
-    backgroundColor: '#34C759',
+    backgroundColor: "#34C759",
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: "#FFFFFF",
   },
   conversationContent: {
     flex: 1,
   },
   conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
   },
   conversationName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: "600",
+    color: "#000000",
     flex: 1,
     marginRight: 8,
   },
   timestamp: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: "#8E8E93",
   },
   conversationFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   lastMessage: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: "#8E8E93",
     flex: 1,
     marginRight: 8,
   },
   unreadBadge: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     borderRadius: 12,
     minWidth: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 6,
   },
   unreadCount: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 32,
   },
   emptyStateTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: "600",
+    color: "#000000",
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     right: 24,
     bottom: 24,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
