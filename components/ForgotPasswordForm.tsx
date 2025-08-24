@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface ForgotPasswordFormProps {
   onBackToSignIn: () => void;
@@ -17,6 +18,7 @@ interface ForgotPasswordFormProps {
 export function ForgotPasswordForm({
   onBackToSignIn,
 }: ForgotPasswordFormProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState<{ email?: string; general?: string }>(
     {}
@@ -26,9 +28,10 @@ export function ForgotPasswordForm({
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
-    if (!email.trim()) newErrors.email = "El email es requerido";
+    if (!email.trim())
+      newErrors.email = t("forgotPassword.emailRequired", "El email es requerido");
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      newErrors.email = "Ingresa un email válido";
+      newErrors.email = t("forgotPassword.emailInvalid", "Ingresa un email válido");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -42,7 +45,10 @@ export function ForgotPasswordForm({
       setIsSuccess(true);
     } catch {
       setErrors({
-        general: "Hubo un error al enviar el email. Inténtalo de nuevo.",
+        general: t(
+          "forgotPassword.sendError",
+          "Hubo un error al enviar el email. Inténtalo de nuevo."
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -56,19 +62,23 @@ export function ForgotPasswordForm({
           <View style={styles.iconCircle}>
             <CheckCircle size={32} color="#16a34a" />
           </View>
-          <Text style={styles.successTitle}>¡Email enviado!</Text>
+          <Text style={styles.successTitle}>
+            {t("forgotPassword.emailSent", "¡Email enviado!")}
+          </Text>
           <Text style={styles.successMessage}>
-            Hemos enviado un enlace de recuperación a{" "}
+            {t("forgotPassword.sentTo", "Hemos enviado un enlace de recuperación a")}{" "}
             <Text style={{ fontWeight: "bold" }}>{email}</Text>
           </Text>
           <Text style={styles.successInfo}>
-            Revisa tu bandeja de entrada y sigue las instrucciones para
-            restablecer tu contraseña.
+            {t(
+              "forgotPassword.checkInbox",
+              "Revisa tu bandeja de entrada y sigue las instrucciones para restablecer tu contraseña."
+            )}
           </Text>
           <TouchableOpacity style={styles.backButton} onPress={onBackToSignIn}>
             <ArrowLeft size={16} color="#000" style={{ marginRight: 8 }} />
             <Text style={styles.backButtonText}>
-              Volver al inicio de sesión
+              {t("forgotPassword.backToSignIn", "Volver al inicio de sesión")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -79,10 +89,14 @@ export function ForgotPasswordForm({
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Recuperar Contraseña</Text>
+        <Text style={styles.title}>
+          {t("forgotPassword.title", "Recuperar Contraseña")}
+        </Text>
         <Text style={styles.description}>
-          Ingresa tu email y te enviaremos un enlace para restablecer tu
-          contraseña
+          {t(
+            "forgotPassword.description",
+            "Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña"
+          )}
         </Text>
 
         {errors.general && (
@@ -93,7 +107,7 @@ export function ForgotPasswordForm({
           <Mail size={16} color="#9ca3af" style={styles.inputIcon} />
           <TextInput
             style={[styles.input, errors.email && { borderColor: "#ef4444" }]}
-            placeholder="tu@email.com"
+            placeholder={t("forgotPassword.emailPlaceholder", "tu@email.com")}
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -115,14 +129,16 @@ export function ForgotPasswordForm({
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.submitButtonText}>
-              Enviar enlace de recuperación
+              {t("forgotPassword.sendLink", "Enviar enlace de recuperación")}
             </Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.backButton} onPress={onBackToSignIn}>
           <ArrowLeft size={16} color="#000" style={{ marginRight: 8 }} />
-          <Text style={styles.backButtonText}>Volver al inicio de sesión</Text>
+          <Text style={styles.backButtonText}>
+            {t("forgotPassword.backToSignIn", "Volver al inicio de sesión")}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -130,7 +146,8 @@ export function ForgotPasswordForm({
 }
 
 const styles = StyleSheet.create({
- container: {marginTop: 20,
+  container: {
+    marginTop: 20,
     flexGrow: 1,
     justifyContent: "center",
     padding: 16,

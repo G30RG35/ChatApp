@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface Conversation {
   id: string;
@@ -76,6 +77,7 @@ const mockConversations: Conversation[] = [
 ];
 
 export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -152,8 +154,8 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="chatbubble-outline" size={64} color="#C7C7CC" />
-      <Text style={styles.emptyStateTitle}>No hay conversaciones</Text>
-      <Text style={styles.emptyStateText}>Inicia una nueva conversación para comenzar</Text>
+      <Text style={styles.emptyStateTitle}>{t("home.emptyTitle", "No hay conversaciones")}</Text>
+      <Text style={styles.emptyStateText}>{t("home.emptyText", "Inicia una nueva conversación para comenzar")}</Text>
     </View>
   );
 
@@ -165,7 +167,7 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
           <View style={styles.logo}>
             <Ionicons name="chatbubble" size={24} color="#FFFFFF" />
           </View>
-          <Text style={styles.headerTitle}>Mensajes</Text>
+          <Text style={styles.headerTitle}>{t("home.title", "Mensajes")}</Text>
         </View>
       </View>
 
@@ -175,7 +177,7 @@ export function HomeScreen({ onNewChat, onStartChat }: HomeScreenProps) {
           <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar conversaciones..."
+            placeholder={t("home.searchPlaceholder", "Buscar conversaciones...")}
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#8E8E93"

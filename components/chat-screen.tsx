@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../utils/utils';
+import { useTranslation } from 'react-i18next';
 
 interface Message {
   id: string;
@@ -30,9 +31,9 @@ interface ChatScreenProps {
   onBack: () => void;
   onVideoCall?: () => void;
   onVoiceCall?: () => void;
-  conversacionId: string; // <-- Necesario para los endpoints
-  userId: string;         // <-- ID del usuario autenticado
-  contactId: string;      // <-- ID del contacto
+  conversacionId: string;
+  userId: string;
+  contactId: string;
 }
 
 export function ChatScreen({
@@ -45,6 +46,7 @@ export function ChatScreen({
   userId,
   contactId,
 }: ChatScreenProps) {
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -65,7 +67,7 @@ export function ChatScreen({
           id: msg.id.toString(),
           text: msg.contenido,
           sender: msg.remitente_id === userId ? "me" : "other",
-          timestamp: new Date(msg.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+          timestamp: new Date(msg.created_at).toLocaleTimeString(i18n.language === "en" ? "en-US" : "es-ES", { hour: "2-digit", minute: "2-digit" }),
           status: msg.estado || "sent",
         }))
       );
@@ -150,7 +152,9 @@ export function ChatScreen({
           <View style={styles.contactInfo}>
             <Text style={styles.contactName}>{contactName}</Text>
             <Text style={styles.contactStatus}>
-              {isTyping ? "Escribiendo..." : "En línea"}
+              {isTyping
+                ? t("chat.typing", "Escribiendo...")
+                : t("chat.online", "En línea")}
             </Text>
           </View>
         </View>
@@ -183,7 +187,7 @@ export function ChatScreen({
         <View style={styles.inputRow}>
           <TextInput
             style={styles.textInput}
-            placeholder="Escribe un mensaje..."
+            placeholder={t("chat.inputPlaceholder", "Escribe un mensaje...")}
             value={newMessage}
             onChangeText={setNewMessage}
             onSubmitEditing={handleSendMessage}

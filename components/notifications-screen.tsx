@@ -17,6 +17,7 @@ import {
   Check,
   X,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface Notification {
   id: string;
@@ -80,6 +81,7 @@ const mockNotifications: Notification[] = [
 ];
 
 export function NotificationsScreen() {
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState(mockNotifications);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -137,9 +139,16 @@ export function NotificationsScreen() {
             <Bell size={20} color="#fff" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Notificaciones</Text>
+            <Text style={styles.headerTitle}>
+              {t("notifications.title", "Notificaciones")}
+            </Text>
             {unreadCount > 0 && (
-              <Text style={styles.unreadText}>{unreadCount} sin leer</Text>
+              <Text style={styles.unreadText}>
+                {t("notifications.unread", {
+                  count: unreadCount,
+                  defaultValue: "{{count}} sin leer",
+                })}
+              </Text>
             )}
           </View>
         </View>
@@ -149,7 +158,9 @@ export function NotificationsScreen() {
               style={styles.headerButton}
               onPress={markAllAsRead}
             >
-              <Text style={styles.headerButtonText}>Marcar todas</Text>
+              <Text style={styles.headerButtonText}>
+                {t("notifications.markAll", "Marcar todas")}
+              </Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.iconButton}>
@@ -164,10 +175,13 @@ export function NotificationsScreen() {
           <View style={styles.noNotifications}>
             <Bell size={64} color="#9ca3af" />
             <Text style={styles.noNotificationsTitle}>
-              No hay notificaciones
+              {t("notifications.emptyTitle", "No hay notificaciones")}
             </Text>
             <Text style={styles.noNotificationsText}>
-              Te notificaremos cuando tengas mensajes nuevos
+              {t(
+                "notifications.emptyText",
+                "Te notificaremos cuando tengas mensajes nuevos"
+              )}
             </Text>
           </View>
         ) : (
@@ -204,11 +218,15 @@ export function NotificationsScreen() {
                   <View style={styles.actions}>
                     <TouchableOpacity style={styles.acceptButton}>
                       <Check size={12} color="#fff" />
-                      <Text style={styles.actionText}>Aceptar</Text>
+                      <Text style={styles.actionText}>
+                        {t("notifications.accept", "Aceptar")}
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.rejectButton}>
                       <X size={12} color="#fff" />
-                      <Text style={styles.actionText}>Rechazar</Text>
+                      <Text style={styles.actionText}>
+                        {t("notifications.reject", "Rechazar")}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -228,7 +246,7 @@ export function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
- container: {marginTop: 20, flex: 1, backgroundColor: "#f9fafb" },
+  container: { marginTop: 20, flex: 1, backgroundColor: "#f9fafb" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

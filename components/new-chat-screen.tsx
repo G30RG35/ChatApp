@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { ArrowLeft, Search, Users, UserPlus } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface Contact {
   id: string;
@@ -28,6 +29,7 @@ export function NewChatScreen({
   onStartChat,
   onCreateGroup,
 }: NewChatScreenProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [contacts] = useState<Contact[]>([
     {
@@ -41,7 +43,7 @@ export function NewChatScreen({
       name: "Carlos López",
       avatar: "/placeholder.svg",
       status: "offline",
-      lastSeen: "Hace 2 horas",
+      lastSeen: t("group.lastSeenHours", "Hace 2 horas", { hours: 2 }),
     },
     {
       id: "3",
@@ -54,7 +56,7 @@ export function NewChatScreen({
       name: "David Martín",
       avatar: "/placeholder.svg",
       status: "offline",
-      lastSeen: "Ayer",
+      lastSeen: t("group.lastSeenYesterday", "Ayer"),
     },
     {
       id: "5",
@@ -67,7 +69,7 @@ export function NewChatScreen({
       name: "Pedro González",
       avatar: "/placeholder.svg",
       status: "offline",
-      lastSeen: "Hace 1 semana",
+      lastSeen: t("group.lastSeenHours", "Hace 1 semana", { hours: 168 }),
     },
   ]);
 
@@ -87,7 +89,9 @@ export function NewChatScreen({
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <ArrowLeft size={20} color="#111" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nuevo Chat</Text>
+        <Text style={styles.headerTitle}>
+          {t("newChat.title", "Nuevo Chat")}
+        </Text>
       </View>
 
       {/* Search */}
@@ -95,7 +99,7 @@ export function NewChatScreen({
         <Search size={16} color="#9ca3af" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar contactos..."
+          placeholder={t("newChat.searchPlaceholder", "Buscar contactos...")}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -107,14 +111,18 @@ export function NewChatScreen({
           <View style={styles.actionIconWrap}>
             <Users size={20} color="#2563eb" />
           </View>
-          <Text style={styles.actionText}>Crear grupo</Text>
+          <Text style={styles.actionText}>
+            {t("newChat.createGroup", "Crear grupo")}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton}>
           <View style={styles.actionIconWrap}>
             <UserPlus size={20} color="#2563eb" />
           </View>
-          <Text style={styles.actionText}>Agregar contacto</Text>
+          <Text style={styles.actionText}>
+            {t("newChat.addContact", "Agregar contacto")}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -122,7 +130,9 @@ export function NewChatScreen({
       <ScrollView style={styles.contactsList}>
         {onlineContacts.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>En línea</Text>
+            <Text style={styles.sectionTitle}>
+              {t("newChat.online", "En línea")}
+            </Text>
             {onlineContacts.map((c) => (
               <TouchableOpacity
                 key={c.id}
@@ -132,7 +142,9 @@ export function NewChatScreen({
                 <View style={styles.avatarOnline} />
                 <View>
                   <Text style={styles.contactName}>{c.name}</Text>
-                  <Text style={styles.contactStatus}>En línea</Text>
+                  <Text style={styles.contactStatus}>
+                    {t("group.online", "En línea")}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -141,7 +153,9 @@ export function NewChatScreen({
 
         {offlineContacts.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Contactos</Text>
+            <Text style={styles.sectionTitle}>
+              {t("newChat.contacts", "Contactos")}
+            </Text>
             {offlineContacts.map((c) => (
               <TouchableOpacity
                 key={c.id}
@@ -162,7 +176,8 @@ export function NewChatScreen({
           <View style={styles.noResults}>
             <Search size={48} color="#9ca3af" />
             <Text style={styles.noResultsText}>
-              No se encontraron contactos con "{searchQuery}"
+              {t("newChat.noResults", "No se encontraron contactos con")} "
+              {searchQuery}"
             </Text>
           </View>
         ) : null}
@@ -172,7 +187,7 @@ export function NewChatScreen({
 }
 
 const styles = StyleSheet.create({
- container: {marginTop: 20, flex: 1, backgroundColor: "#f9fafb" },
+  container: { marginTop: 20, flex: 1, backgroundColor: "#f9fafb" },
   header: {
     flexDirection: "row",
     alignItems: "center",

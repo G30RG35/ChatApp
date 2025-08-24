@@ -13,6 +13,9 @@ import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { EmailVerificationScreen } from './components/email-verification-screen';
 import { VerificationSuccess } from './components/verification-success';
 import { MainApp } from './components/main-app';
+import './i18n'; // importa la configuración
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n';
 
 export default function HomePage() {
   const [currentView, setCurrentView] = useState<
@@ -61,51 +64,53 @@ export default function HomePage() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>ChatApp</Text>
-            <Text style={styles.subtitle}>{getSubtitle()}</Text>
+    <I18nextProvider i18n={i18n}>
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>ChatApp</Text>
+              <Text style={styles.subtitle}>{getSubtitle()}</Text>
+            </View>
+
+            {/* Forms */}
+            <View style={styles.formContainer}>
+              {currentView === "signUp" && (
+                <SignUpForm 
+                  onSwitchToSignIn={() => setCurrentView("signIn")} 
+                  onAuthSuccess={handleSignUpSuccess} 
+                />
+              )}
+
+              {currentView === "signIn" && (
+                <SignInForm
+                  onSwitchToSignUp={() => setCurrentView("signUp")}
+                  onSwitchToForgotPassword={() => setCurrentView("forgotPassword")}
+                  onAuthSuccess={handleAuthSuccess}
+                />
+              )}
+
+              {currentView === "forgotPassword" && (
+                <ForgotPasswordForm onBackToSignIn={() => setCurrentView("signIn")} />
+              )}
+
+              {currentView === "emailVerification" && (
+                <EmailVerificationScreen
+                  email={userEmail}
+                  onBackToSignUp={() => setCurrentView("signUp")}
+                  onVerificationSuccess={handleVerificationSuccess}
+                />
+              )}
+
+              {currentView === "verificationSuccess" && (
+                <VerificationSuccess onContinue={handleAuthSuccess} />
+              )}
+            </View>
           </View>
-
-          {/* Forms */}
-          <View style={styles.formContainer}>
-            {currentView === "signUp" && (
-              <SignUpForm 
-                onSwitchToSignIn={() => setCurrentView("signIn")} 
-                onAuthSuccess={handleSignUpSuccess} 
-              />
-            )}
-
-            {currentView === "signIn" && (
-              <SignInForm
-                onSwitchToSignUp={() => setCurrentView("signUp")}
-                onSwitchToForgotPassword={() => setCurrentView("forgotPassword")}
-                onAuthSuccess={handleAuthSuccess}
-              />
-            )}
-
-            {currentView === "forgotPassword" && (
-              <ForgotPasswordForm onBackToSignIn={() => setCurrentView("signIn")} />
-            )}
-
-            {currentView === "emailVerification" && (
-              <EmailVerificationScreen
-                email={userEmail}
-                onBackToSignUp={() => setCurrentView("signUp")}
-                onVerificationSuccess={handleVerificationSuccess}
-              />
-            )}
-
-            {currentView === "verificationSuccess" && (
-              <VerificationSuccess onContinue={handleAuthSuccess} />
-            )}
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </I18nextProvider>
   );
 }
 

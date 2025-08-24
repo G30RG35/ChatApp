@@ -9,6 +9,7 @@ import {
   Easing,
 } from "react-native";
 import { Phone, PhoneOff, MessageCircle, Users } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface IncomingCallScreenProps {
   callerName: string;
@@ -31,6 +32,7 @@ export function IncomingCallScreen({
   onDecline,
   onMessage,
 }: IncomingCallScreenProps) {
+  const { t } = useTranslation();
   const [isRinging, setIsRinging] = useState(true);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0.2)).current;
@@ -73,10 +75,10 @@ export function IncomingCallScreen({
     ).start();
   }, []);
 
-  const displayName = isGroupCall ? groupName || "Grupo" : callerName;
+  const displayName = isGroupCall ? groupName || t("incomingCall.group", "Grupo") : callerName;
   const callType = isGroupCall
-    ? "Videollamada grupal"
-    : "Videollamada entrante";
+    ? t("incomingCall.groupCall", "Videollamada grupal")
+    : t("incomingCall.incomingCall", "Videollamada entrante");
 
   return (
     <View style={styles.container}>
@@ -87,7 +89,13 @@ export function IncomingCallScreen({
           <View style={styles.badge}>
             <Users size={16} color="#fff" />
             <Text style={styles.badgeText}>
-              {participantCount} participantes
+              {t("incomingCall.participants", {
+                count: participantCount,
+                defaultValue:
+                  participantCount === 1
+                    ? "1 participante"
+                    : `${participantCount} participantes`,
+              })}
             </Text>
           </View>
         )}
@@ -131,8 +139,8 @@ export function IncomingCallScreen({
 
         <Text style={styles.infoText}>
           {isGroupCall
-            ? "Te están invitando a unirte al grupo"
-            : "Te está llamando"}
+            ? t("incomingCall.invite", "Te están invitando a unirte al grupo")
+            : t("incomingCall.callingYou", "Te está llamando")}
         </Text>
       </View>
 
@@ -154,8 +162,8 @@ export function IncomingCallScreen({
         </View>
 
         <View style={styles.labels}>
-          <Text style={styles.label}>Rechazar</Text>
-          <Text style={styles.label}>Aceptar</Text>
+          <Text style={styles.label}>{t("incomingCall.decline", "Rechazar")}</Text>
+          <Text style={styles.label}>{t("incomingCall.accept", "Aceptar")}</Text>
         </View>
       </View>
     </View>

@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
-import { api } from "../utils/utils"; // Usa tu helper de API
+import { api } from "../utils/utils";
+import { useTranslation } from "react-i18next";
 
 interface SignUpFormProps {
   onSwitchToSignIn: () => void;
@@ -20,6 +21,7 @@ export function SignUpForm({
   onSwitchToSignIn,
   onAuthSuccess,
 }: SignUpFormProps) {
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,24 +35,23 @@ export function SignUpForm({
     const newErrors: typeof errors = {};
 
     if (!username.trim())
-      newErrors.username = "El nombre de usuario es requerido";
+      newErrors.username = t("signUp.usernameRequired", "El nombre de usuario es requerido");
     else if (username.length < 3)
-      newErrors.username =
-        "El nombre de usuario debe tener al menos 3 caracteres";
+      newErrors.username = t("signUp.usernameMin", "El nombre de usuario debe tener al menos 3 caracteres");
     else if (!/^[a-zA-Z0-9_]+$/.test(username))
-      newErrors.username = "Solo se permiten letras, números y guiones bajos";
+      newErrors.username = t("signUp.usernamePattern", "Solo se permiten letras, números y guiones bajos");
 
-    if (!email.trim()) newErrors.email = "El email es requerido";
+    if (!email.trim()) newErrors.email = t("signUp.emailRequired", "El email es requerido");
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      newErrors.email = "Ingresa un email válido";
+      newErrors.email = t("signUp.emailInvalid", "Ingresa un email válido");
 
-    if (!password) newErrors.password = "La contraseña es requerida";
+    if (!password) newErrors.password = t("signUp.passwordRequired", "La contraseña es requerida");
     else if (password.length < 6)
-      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+      newErrors.password = t("signUp.passwordMin", "La contraseña debe tener al menos 6 caracteres");
 
-    if (!confirmPassword) newErrors.confirmPassword = "Confirma tu contraseña";
+    if (!confirmPassword) newErrors.confirmPassword = t("signUp.confirmRequired", "Confirma tu contraseña");
     else if (password !== confirmPassword)
-      newErrors.confirmPassword = "Las contraseñas no coinciden";
+      newErrors.confirmPassword = t("signUp.noMatch", "Las contraseñas no coinciden");
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -63,22 +64,19 @@ export function SignUpForm({
     setErrors({});
 
     try {
-    //   // Llama al endpoint de registro de usuario
-    //   const data = await api.post("/usuarios", {
-    //     username,
-    //     email,
-    //     password,
-    //   });
-
-    //   if (data && data.id) {
-    //     onAuthSuccess(email);
-    //   } else {
-    //     setErrors({ general: data.error || "Error al crear la cuenta. Inténtalo de nuevo." });
-    //   }
-    onAuthSuccess(email);
-
+      // const data = await api.post("/usuarios", {
+      //   username,
+      //   email,
+      //   password,
+      // });
+      // if (data && data.id) {
+      //   onAuthSuccess(email);
+      // } else {
+      //   setErrors({ general: data.error || t("signUp.error", "Error al crear la cuenta. Inténtalo de nuevo.") });
+      // }
+      onAuthSuccess(email);
     } catch {
-      setErrors({ general: "Error de red. Inténtalo de nuevo." });
+      setErrors({ general: t("signUp.networkError", "Error de red. Inténtalo de nuevo.") });
     } finally {
       setIsLoading(false);
     }
@@ -123,9 +121,9 @@ export function SignUpForm({
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Crear Cuenta</Text>
+      <Text style={styles.title}>{t("signUp.title", "Crear Cuenta")}</Text>
       <Text style={styles.description}>
-        Completa los datos para unirte a ChatApp
+        {t("signUp.description", "Completa los datos para unirte a ChatApp")}
       </Text>
 
       {errors.general && (
@@ -133,21 +131,21 @@ export function SignUpForm({
       )}
 
       {renderInput(
-        "Nombre de usuario",
+        t("signUp.username", "Nombre de usuario"),
         <User size={20} color="#9ca3af" style={styles.icon} />,
         username,
         setUsername,
         errors.username
       )}
       {renderInput(
-        "Email",
+        t("signUp.email", "Email"),
         <Mail size={20} color="#9ca3af" style={styles.icon} />,
         email,
         setEmail,
         errors.email
       )}
       {renderInput(
-        "Contraseña",
+        t("signUp.password", "Contraseña"),
         <Lock size={20} color="#9ca3af" style={styles.icon} />,
         password,
         setPassword,
@@ -156,7 +154,7 @@ export function SignUpForm({
         () => setShowPassword((prev) => !prev)
       )}
       {renderInput(
-        "Confirmar contraseña",
+        t("signUp.confirmPassword", "Confirmar contraseña"),
         <Lock size={20} color="#9ca3af" style={styles.icon} />,
         confirmPassword,
         setConfirmPassword,
@@ -173,14 +171,14 @@ export function SignUpForm({
         {isLoading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.submitButtonText}>Crear cuenta</Text>
+          <Text style={styles.submitButtonText}>{t("signUp.createAccount", "Crear cuenta")}</Text>
         )}
       </TouchableOpacity>
 
       <View style={styles.switchContainer}>
-        <Text style={styles.switchText}>¿Ya tienes cuenta? </Text>
+        <Text style={styles.switchText}>{t("signUp.haveAccount", "¿Ya tienes cuenta? ")} </Text>
         <TouchableOpacity onPress={onSwitchToSignIn}>
-          <Text style={styles.switchButton}>Inicia sesión</Text>
+          <Text style={styles.switchButton}>{t("signUp.signIn", "Inicia sesión")}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

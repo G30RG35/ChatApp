@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../utils/utils";
+import { useTranslation } from "react-i18next";
 
 interface UserProfileScreenProps {
   userId: string;
@@ -33,6 +34,7 @@ interface FormErrors {
 }
 
 export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -48,7 +50,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
       const data = await api.get(`/usuarios/${userId}`);
       setProfile(data);
     } catch {
-      setErrors({ general: "No se pudo cargar el perfil" });
+      setErrors({ general: t("profile.loadError", "No se pudo cargar el perfil") });
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +58,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
 
   const handleSubmit = async () => {
     if (!profile?.username?.trim() || !profile?.email?.trim()) {
-      setErrors({ general: "El nombre de usuario y el email son requeridos" });
+      setErrors({ general: t("profile.required", "El nombre de usuario y el email son requeridos") });
       return;
     }
 
@@ -67,7 +69,6 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
       // Simular llamada a API
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      console.log("Perfil actualizado:", profile);
       setIsSuccess(true);
 
       // Volver automáticamente después de 2 segundos
@@ -76,20 +77,19 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
         onBack();
       }, 2000);
     } catch (error) {
-      setErrors({ general: "Error al actualizar el perfil. Inténtalo de nuevo." });
+      setErrors({ general: t("profile.updateError", "Error al actualizar el perfil. Inténtalo de nuevo.") });
     } finally {
       setIsLoading(false);
     }
   };
 
   const AvatarComponent = () => {
-    const initials = `${profile?.username[0]}`;
-    
+    const initials = `${profile?.username?.[0] || ""}`;
     return (
       <View style={styles.avatar}>
-        <Image 
-          source={{ uri: profile?.avatar || "https://placekitten.com/80/80" }} 
-          style={styles.avatarImage} 
+        <Image
+          source={{ uri: profile?.avatar || "https://placekitten.com/80/80" }}
+          style={styles.avatarImage}
         />
         <View style={styles.avatarFallback}>
           <Text style={styles.avatarText}>{initials}</Text>
@@ -105,16 +105,16 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Perfil</Text>
+          <Text style={styles.headerTitle}>{t("profile.title", "Perfil")}</Text>
         </View>
 
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={64} color="#34C759" />
           </View>
-          <Text style={styles.successTitle}>¡Perfil actualizado!</Text>
+          <Text style={styles.successTitle}>{t("profile.updated", "¡Perfil actualizado!")}</Text>
           <Text style={styles.successMessage}>
-            Tu información de perfil ha sido guardada exitosamente.
+            {t("profile.successMessage", "Tu información de perfil ha sido guardada exitosamente.")}
           </Text>
         </View>
       </SafeAreaView>
@@ -132,9 +132,9 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
   if (!profile) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{errors.general || "Perfil no encontrado"}</Text>
+        <Text style={styles.errorText}>{errors.general || t("profile.notFound", "Perfil no encontrado")}</Text>
         <TouchableOpacity onPress={onBack} style={styles.backButtonContainer}>
-          <Text style={styles.backButtonText}>Volver</Text>
+          <Text style={styles.backButtonText}>{t("button.back", "Volver")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -147,16 +147,16 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Perfil</Text>
-        <TouchableOpacity 
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
+        <Text style={styles.headerTitle}>{t("profile.title", "Perfil")}</Text>
+        <TouchableOpacity
+          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
           onPress={handleSubmit}
           disabled={isLoading}
         >
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.saveButtonText}>Guardar</Text>
+            <Text style={styles.saveButtonText}>{t("button.save", "Guardar")}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -172,26 +172,26 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
 
         {/* Avatar Section */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Foto de perfil</Text>
+          <Text style={styles.cardTitle}>{t("profile.photo", "Foto de perfil")}</Text>
           <View style={styles.avatarSection}>
             <AvatarComponent />
             <TouchableOpacity style={styles.changePhotoButton}>
               <Ionicons name="camera" size={18} color="#007AFF" />
-              <Text style={styles.changePhotoText}>Cambiar foto</Text>
+              <Text style={styles.changePhotoText}>{t("profile.changePhoto", "Cambiar foto")}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Personal Information */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Información personal</Text>
+          <Text style={styles.cardTitle}>{t("profile.personalInfo", "Información personal")}</Text>
           <Text style={styles.cardDescription}>
-            Esta información será visible para tus contactos
+            {t("profile.personalInfoDesc", "Esta información será visible para tus contactos")}
           </Text>
-          
+
           <View style={styles.row}>
             <View style={[styles.inputContainer, styles.halfInput]}>
-              <Text style={styles.label}>Nombre</Text>
+              <Text style={styles.label}>{t("profile.name", "Nombre")}</Text>
               <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
                 <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
                 <TextInput
@@ -204,7 +204,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
                         : { id: "", username: value, email: "" }
                     )
                   }
-                  placeholder="Nombre de usuario"
+                  placeholder={t("profile.namePlaceholder", "Nombre de usuario")}
                   editable={false}
                 />
               </View>
@@ -212,7 +212,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
             </View>
 
             <View style={[styles.inputContainer, styles.halfInput]}>
-              <Text style={styles.label}>Apellido</Text>
+              <Text style={styles.label}>{t("profile.lastname", "Apellido")}</Text>
               <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
                 <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
                 <TextInput
@@ -225,7 +225,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
                         : { id: "", username: "", email: value }
                     )
                   }
-                  placeholder="Apellido"
+                  placeholder={t("profile.lastnamePlaceholder", "Apellido")}
                   editable={false}
                 />
               </View>
@@ -256,7 +256,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Biografía</Text>
+            <Text style={styles.label}>{t("profile.bio", "Biografía")}</Text>
             <TextInput
               style={[styles.textArea, styles.input]}
               value={profile.username}
@@ -267,7 +267,7 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
                     : { id: "", username: "", email: value }
                 )
               }
-              placeholder="Cuéntanos algo sobre ti..."
+              placeholder={t("profile.bioPlaceholder", "Cuéntanos algo sobre ti...")}
               multiline
               numberOfLines={3}
               editable={false}
@@ -277,10 +277,10 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
 
         {/* Contact Information */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Información de contacto</Text>
-          
+          <Text style={styles.cardTitle}>{t("profile.contactInfo", "Información de contacto")}</Text>
+
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Teléfono</Text>
+            <Text style={styles.label}>{t("profile.phone", "Teléfono")}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="call" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
@@ -293,14 +293,12 @@ export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
                       : { id: "", username: "", email: value }
                   )
                 }
-                placeholder="Teléfono"
+                placeholder={t("profile.phonePlaceholder", "Teléfono")}
                 keyboardType="phone-pad"
                 editable={false}
               />
             </View>
           </View>
-
-          
         </View>
       </ScrollView>
     </SafeAreaView>

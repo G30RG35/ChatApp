@@ -9,6 +9,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n'; // importa tu instancia de i18n
 
 interface Language {
   code: string;
@@ -30,9 +32,11 @@ const languages: Language[] = [
 ];
 
 export function LanguageModal({ isOpen, onClose, currentLanguage, onLanguageChange }: LanguageModalProps) {
+  const { t } = useTranslation();
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
 
   const handleSave = () => {
+    i18n.changeLanguage(selectedLanguage); // Cambia el idioma globalmente
     onLanguageChange(selectedLanguage);
     onClose();
   };
@@ -65,9 +69,9 @@ export function LanguageModal({ isOpen, onClose, currentLanguage, onLanguageChan
               <Ionicons name="globe" size={24} color="#007AFF" />
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.title}>Seleccionar idioma</Text>
+              <Text style={styles.title}>{t('language.select')}</Text>
               <Text style={styles.subtitle}>
-                Idioma actual: {currentLang?.flag} {currentLang?.nativeName}
+                {t('language.current')}: {currentLang?.flag} {currentLang?.nativeName}
               </Text>
             </View>
           </View>
@@ -106,7 +110,7 @@ export function LanguageModal({ isOpen, onClose, currentLanguage, onLanguageChan
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+              <Text style={styles.cancelButtonText}>{t('button.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -116,7 +120,7 @@ export function LanguageModal({ isOpen, onClose, currentLanguage, onLanguageChan
               onPress={handleSave}
               disabled={selectedLanguage === currentLanguage}
             >
-              <Text style={styles.saveButtonText}>Guardar cambios</Text>
+              <Text style={styles.saveButtonText}>{t('button.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>

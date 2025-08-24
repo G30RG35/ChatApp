@@ -6,16 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   StyleSheet,
   SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../utils/utils'; // Importa tu helper de API
+import { api } from '../utils/utils';
+import { useTranslation } from 'react-i18next';
 
 interface ChangePasswordScreenProps {
   onBack: () => void;
-  userEmail: string; // <-- Asegúrate de pasar el email del usuario autenticado
+  userEmail: string;
 }
 
 interface FormData {
@@ -32,6 +32,7 @@ interface FormErrors {
 }
 
 export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreenProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<FormData>({
     currentPassword: "",
     newPassword: "",
@@ -51,21 +52,21 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
     const newErrors: FormErrors = {};
 
     if (!formData.currentPassword) {
-      newErrors.currentPassword = "Ingresa tu contraseña actual";
+      newErrors.currentPassword = t("changePassword.currentRequired", "Ingresa tu contraseña actual");
     }
 
     if (!formData.newPassword) {
-      newErrors.newPassword = "Ingresa una nueva contraseña";
+      newErrors.newPassword = t("changePassword.newRequired", "Ingresa una nueva contraseña");
     } else if (formData.newPassword.length < 6) {
-      newErrors.newPassword = "La contraseña debe tener al menos 6 caracteres";
+      newErrors.newPassword = t("changePassword.minLength", "La contraseña debe tener al menos 6 caracteres");
     } else if (formData.newPassword === formData.currentPassword) {
-      newErrors.newPassword = "La nueva contraseña debe ser diferente a la actual";
+      newErrors.newPassword = t("changePassword.different", "La nueva contraseña debe ser diferente a la actual");
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Confirma tu nueva contraseña";
+      newErrors.confirmPassword = t("changePassword.confirmRequired", "Confirma tu nueva contraseña");
     } else if (formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Las contraseñas no coinciden";
+      newErrors.confirmPassword = t("changePassword.noMatch", "Las contraseñas no coinciden");
     }
 
     setErrors(newErrors);
@@ -86,7 +87,6 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
     setErrors({});
 
     try {
-      // Llama al endpoint del backend para cambiar contraseña
       const res = await api.post("/cambiar-password", {
         email: userEmail,
         oldPassword: formData.currentPassword,
@@ -97,11 +97,11 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
         setIsSuccess(true);
       } else {
         setErrors({
-          general: res.error || "Error al cambiar la contraseña. Inténtalo de nuevo.",
+          general: res.error || t("changePassword.error", "Error al cambiar la contraseña. Inténtalo de nuevo."),
         });
       }
     } catch (error) {
-      setErrors({ general: "Error de red. Inténtalo de nuevo." });
+      setErrors({ general: t("changePassword.networkError", "Error de red. Inténtalo de nuevo.") });
     } finally {
       setIsLoading(false);
     }
@@ -118,20 +118,19 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Cambiar contraseña</Text>
+          <Text style={styles.headerTitle}>{t("changePassword.title", "Cambiar contraseña")}</Text>
         </View>
 
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={64} color="#34C759" />
           </View>
-          <Text style={styles.successTitle}>¡Contraseña actualizada!</Text>
+          <Text style={styles.successTitle}>{t("changePassword.updated", "¡Contraseña actualizada!")}</Text>
           <Text style={styles.successMessage}>
-            Tu contraseña ha sido cambiada exitosamente. Usa tu nueva contraseña la próxima vez que inicies
-            sesión.
+            {t("changePassword.successMessage", "Tu contraseña ha sido cambiada exitosamente. Usa tu nueva contraseña la próxima vez que inicies sesión.")}
           </Text>
           <TouchableOpacity style={styles.button} onPress={onBack}>
-            <Text style={styles.buttonText}>Volver a configuración</Text>
+            <Text style={styles.buttonText}>{t("button.back", "Volver a configuración")}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -145,15 +144,15 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cambiar contraseña</Text>
+        <Text style={styles.headerTitle}>{t("changePassword.title", "Cambiar contraseña")}</Text>
       </View>
 
       {/* Content */}
       <ScrollView style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Actualizar contraseña</Text>
+          <Text style={styles.cardTitle}>{t("changePassword.update", "Actualizar contraseña")}</Text>
           <Text style={styles.cardDescription}>
-            Ingresa tu contraseña actual y elige una nueva contraseña segura
+            {t("changePassword.description", "Ingresa tu contraseña actual y elige una nueva contraseña segura")}
           </Text>
 
           {errors.general && (
@@ -163,7 +162,7 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
           )}
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Contraseña actual</Text>
+            <Text style={styles.label}>{t("changePassword.current", "Contraseña actual")}</Text>
             <View style={[styles.inputWrapper, errors.currentPassword && styles.inputError]}>
               <Ionicons name="lock-closed" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
@@ -190,7 +189,7 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nueva contraseña</Text>
+            <Text style={styles.label}>{t("changePassword.new", "Nueva contraseña")}</Text>
             <View style={[styles.inputWrapper, errors.newPassword && styles.inputError]}>
               <Ionicons name="lock-closed" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
@@ -217,7 +216,7 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirmar nueva contraseña</Text>
+            <Text style={styles.label}>{t("changePassword.confirm", "Confirmar nueva contraseña")}</Text>
             <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
               <Ionicons name="lock-closed" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
@@ -251,7 +250,7 @@ export function ChangePasswordScreen({ onBack, userEmail }: ChangePasswordScreen
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Cambiar contraseña</Text>
+              <Text style={styles.buttonText}>{t("changePassword.title", "Cambiar contraseña")}</Text>
             )}
           </TouchableOpacity>
         </View>

@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 interface Contact {
   id: string;
@@ -27,6 +28,7 @@ export function CreateGroupScreen({
   onBack,
   onCreateGroup,
 }: CreateGroupScreenProps) {
+  const { t } = useTranslation();
   const [groupName, setGroupName] = useState("");
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [contacts] = useState<Contact[]>([
@@ -41,7 +43,7 @@ export function CreateGroupScreen({
       name: "Carlos López",
       avatar: "https://placehold.co/100x100",
       status: "offline",
-      lastSeen: "Hace 2 horas",
+      lastSeen: t("group.lastSeenHours", "Hace 2 horas", { hours: 2 }),
     },
     {
       id: "3",
@@ -54,7 +56,7 @@ export function CreateGroupScreen({
       name: "David Martín",
       avatar: "https://placehold.co/100x100",
       status: "offline",
-      lastSeen: "Ayer",
+      lastSeen: t("group.lastSeenYesterday", "Ayer"),
     },
     {
       id: "5",
@@ -108,7 +110,9 @@ export function CreateGroupScreen({
         <View style={{ flex: 1 }}>
           <Text style={styles.contactName}>{item.name}</Text>
           <Text style={styles.contactStatus}>
-            {item.status === "online" ? "En línea" : item.lastSeen}
+            {item.status === "online"
+              ? t("group.online", "En línea")
+              : item.lastSeen}
           </Text>
         </View>
       </TouchableOpacity>
@@ -122,7 +126,7 @@ export function CreateGroupScreen({
         <TouchableOpacity onPress={onBack} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nuevo Grupo</Text>
+        <Text style={styles.headerTitle}>{t("group.newGroup", "Nuevo Grupo")}</Text>
         <TouchableOpacity
           onPress={handleCreateGroup}
           disabled={!canCreate}
@@ -142,15 +146,20 @@ export function CreateGroupScreen({
         </View>
         <View style={{ flex: 1 }}>
           <TextInput
-            placeholder="Nombre del grupo"
+            placeholder={t("group.namePlaceholder", "Nombre del grupo")}
             value={groupName}
             onChangeText={setGroupName}
             style={styles.groupInput}
           />
           <Text style={styles.participantsText}>
-            {selectedContacts.length} participante
-            {selectedContacts.length !== 1 ? "s" : ""} seleccionado
-            {selectedContacts.length !== 1 ? "s" : ""}
+            {selectedContacts.length}{" "}
+            {t("group.participant", {
+              count: selectedContacts.length,
+              defaultValue:
+                selectedContacts.length === 1
+                  ? "participante seleccionado"
+                  : "participantes seleccionados",
+            })}
           </Text>
         </View>
       </View>
@@ -158,7 +167,9 @@ export function CreateGroupScreen({
       {/* Selected Contacts */}
       {selectedContacts.length > 0 && (
         <View style={styles.selectedContainer}>
-          <Text style={styles.sectionTitle}>Participantes seleccionados</Text>
+          <Text style={styles.sectionTitle}>
+            {t("group.selectedParticipants", "Participantes seleccionados")}
+          </Text>
           <View style={styles.selectedList}>
             {selectedContacts.map((id) => {
               const contact = contacts.find((c) => c.id === id);
@@ -182,7 +193,7 @@ export function CreateGroupScreen({
 
       {/* Contact List */}
       <View style={{ flex: 1 }}>
-        <Text style={styles.sectionTitle}>Contactos</Text>
+        <Text style={styles.sectionTitle}>{t("group.contacts", "Contactos")}</Text>
         <FlatList
           data={contacts}
           keyExtractor={(item) => item.id}

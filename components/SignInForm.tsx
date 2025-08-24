@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../utils/utils'; // Importa tu helper de API
+import { api } from '../utils/utils';
+import { useTranslation } from 'react-i18next';
 
 interface FormData {
   email: string;
@@ -30,6 +31,7 @@ interface SignInFormProps {
 }
 
 export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthSuccess }: SignInFormProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
@@ -44,13 +46,13 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
     const newErrors: FormErrors = {};
 
     if (!formData.email.trim()) {
-      newErrors.email = "El email es requerido";
+      newErrors.email = t("signIn.emailRequired", "El email es requerido");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Ingresa un email válido";
+      newErrors.email = t("signIn.emailInvalid", "Ingresa un email válido");
     }
 
     if (!formData.password) {
-      newErrors.password = "La contraseña es requerida";
+      newErrors.password = t("signIn.passwordRequired", "La contraseña es requerida");
     }
 
     setErrors(newErrors);
@@ -79,13 +81,13 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
       if (data && data.id) {
         setIsSuccess(true);
         setTimeout(() => {
-          onAuthSuccess(data); // Puedes pasar el usuario si lo necesitas
+          onAuthSuccess(data);
         }, 800);
       } else {
-        setErrors({ general: data.error || "Email o contraseña incorrectos. Inténtalo de nuevo." });
+        setErrors({ general: data.error || t("signIn.invalid", "Email o contraseña incorrectos. Inténtalo de nuevo.") });
       }
     } catch (error) {
-      setErrors({ general: "Error de red. Intenta de nuevo." });
+      setErrors({ general: t("signIn.networkError", "Error de red. Intenta de nuevo.") });
     } finally {
       setIsLoading(false);
     }
@@ -98,10 +100,10 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
           <View style={styles.successIcon}>
             <Ionicons name="chatbubble" size={32} color="#34C759" />
           </View>
-          <Text style={styles.successTitle}>¡Bienvenido de vuelta!</Text>
-          <Text style={styles.successMessage}>Has iniciado sesión exitosamente</Text>
+          <Text style={styles.successTitle}>{t("signIn.welcomeBack", "¡Bienvenido de vuelta!")}</Text>
+          <Text style={styles.successMessage}>{t("signIn.success", "Has iniciado sesión exitosamente")}</Text>
           <TouchableOpacity style={styles.successButton} onPress={() => onAuthSuccess()}>
-            <Text style={styles.successButtonText}>Ir a mensajes</Text>
+            <Text style={styles.successButtonText}>{t("signIn.goToMessages", "Ir a mensajes")}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -114,8 +116,8 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
         <View style={styles.card}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Iniciar Sesión</Text>
-            <Text style={styles.subtitle}>Ingresa tus datos para acceder a ChatApp</Text>
+            <Text style={styles.title}>{t("signIn.title", "Iniciar Sesión")}</Text>
+            <Text style={styles.subtitle}>{t("signIn.subtitle", "Ingresa tus datos para acceder a ChatApp")}</Text>
           </View>
 
           {/* Form */}
@@ -129,12 +131,12 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
 
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t("signIn.email", "Email")}</Text>
               <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
                 <Ionicons name="mail" size={20} color="#8E8E93" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="tu@email.com"
+                  placeholder={t("signIn.emailPlaceholder", "tu@email.com")}
                   value={formData.email}
                   onChangeText={(value) => handleInputChange("email", value)}
                   keyboardType="email-address"
@@ -147,12 +149,12 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Contraseña</Text>
+              <Text style={styles.label}>{t("signIn.password", "Contraseña")}</Text>
               <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
                 <Ionicons name="lock-closed" size={20} color="#8E8E93" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="••••••••"
+                  placeholder={t("signIn.passwordPlaceholder", "••••••••")}
                   value={formData.password}
                   onChangeText={(value) => handleInputChange("password", value)}
                   secureTextEntry={!showPassword}
@@ -182,20 +184,20 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitButtonText}>Iniciar sesión</Text>
+                <Text style={styles.submitButtonText}>{t("signIn.signInButton", "Iniciar sesión")}</Text>
               )}
             </TouchableOpacity>
 
             {/* Links */}
             <View style={styles.linksContainer}>
               <TouchableOpacity onPress={onSwitchToForgotPassword}>
-                <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
+                <Text style={styles.linkText}>{t("signIn.forgotPassword", "¿Olvidaste tu contraseña?")}</Text>
               </TouchableOpacity>
 
               <View style={styles.signupContainer}>
-                <Text style={styles.signupText}>¿No tienes cuenta? </Text>
+                <Text style={styles.signupText}>{t("signIn.noAccount", "¿No tienes cuenta? ")} </Text>
                 <TouchableOpacity onPress={onSwitchToSignUp}>
-                  <Text style={styles.signupLink}>Regístrate</Text>
+                  <Text style={styles.signupLink}>{t("signIn.signUp", "Regístrate")}</Text>
                 </TouchableOpacity>
               </View>
             </View>

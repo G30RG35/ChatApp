@@ -8,6 +8,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface SessionModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ interface SessionModalProps {
 }
 
 export function SessionModal({ isOpen, onClose, onLogout }: SessionModalProps) {
+  const { t } = useTranslation();
+
   const handleLogout = () => {
     onLogout();
     onClose();
@@ -36,9 +39,9 @@ export function SessionModal({ isOpen, onClose, onLogout }: SessionModalProps) {
               <Ionicons name="warning" size={24} color="#FF3B30" />
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.title}>Cerrar sesión</Text>
+              <Text style={styles.title}>{t("sessionModal.title", "Cerrar sesión")}</Text>
               <Text style={styles.subtitle}>
-                ¿Estás seguro de que quieres cerrar tu sesión?
+                {t("sessionModal.subtitle", "¿Estás seguro de que quieres cerrar tu sesión?")}
               </Text>
             </View>
           </View>
@@ -46,19 +49,21 @@ export function SessionModal({ isOpen, onClose, onLogout }: SessionModalProps) {
           {/* Description */}
           <View style={styles.descriptionContainer}>
             <Text style={styles.descriptionText}>
-              Al cerrar sesión perderás acceso a tus conversaciones hasta que vuelvas a iniciar sesión. Tus mensajes se
-              mantendrán seguros y estarán disponibles cuando regreses.
+              {t(
+                "sessionModal.description",
+                "Al cerrar sesión perderás acceso a tus conversaciones hasta que vuelvas a iniciar sesión. Tus mensajes se mantendrán seguros y estarán disponibles cuando regreses."
+              )}
             </Text>
           </View>
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+              <Text style={styles.cancelButtonText}>{t("button.cancel", "Cancelar")}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={18} color="#FFFFFF" style={styles.logoutIcon} />
-              <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
+              <Text style={styles.logoutButtonText}>{t("sessionModal.logout", "Cerrar sesión")}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { ArrowLeft, Globe, Check, CheckCircle } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
 interface Language {
   code: string;
@@ -22,14 +24,14 @@ const languages: Language[] = [
     name: "Spanish",
     nativeName: "Español",
     flag: "🇪🇸",
-    description: "Idioma predeterminado de la aplicación",
+    description: "language.default",
   },
   {
     code: "en",
     name: "English",
     nativeName: "English",
     flag: "🇺🇸",
-    description: "International language",
+    description: "language.international",
   },
 ];
 
@@ -38,6 +40,7 @@ export function LanguageSelectionScreen({
   currentLanguage,
   onLanguageChange,
 }: LanguageSelectionScreenProps) {
+  const { t } = useTranslation();
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -50,7 +53,7 @@ export function LanguageSelectionScreen({
 
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      i18n.changeLanguage(selectedLanguage);
       onLanguageChange(selectedLanguage);
       setIsSuccess(true);
       setTimeout(() => {
@@ -73,7 +76,7 @@ export function LanguageSelectionScreen({
           <TouchableOpacity style={styles.headerBack} onPress={onBack}>
             <ArrowLeft size={18} color="#111" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Idioma</Text>
+          <Text style={styles.headerTitle}>{t("language.title")}</Text>
           <View style={{ width: 88 }} />
         </View>
 
@@ -83,12 +86,15 @@ export function LanguageSelectionScreen({
             <View style={styles.successIconWrap}>
               <CheckCircle size={32} color="#059669" />
             </View>
-            <Text style={styles.successTitle}>¡Idioma actualizado!</Text>
+            <Text style={styles.successTitle}>{t("language.updated")}</Text>
             <Text style={styles.successText}>
-              El idioma se ha cambiado a {newLang?.flag} {newLang?.nativeName}
+              {t("language.changed_to", {
+                flag: newLang?.flag,
+                nativeName: newLang?.nativeName,
+              })}
             </Text>
             <Text style={styles.noteText}>
-              La aplicación se reiniciará para aplicar los cambios.
+              {t("language.restart")}
             </Text>
           </View>
         </View>
@@ -103,13 +109,13 @@ export function LanguageSelectionScreen({
         <TouchableOpacity style={styles.headerBack} onPress={onBack}>
           <ArrowLeft size={18} color="#111" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Idioma</Text>
+        <Text style={styles.headerTitle}>{t("language.title")}</Text>
         <TouchableOpacity
           style={[styles.headerPrimaryBtn, isLoading && { opacity: 0.7 }]}
           onPress={handleSave}
           disabled={isLoading}
         >
-          {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.headerPrimaryBtnText}>Guardar</Text>}
+          {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.headerPrimaryBtnText}>{t("button.save")}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -121,9 +127,9 @@ export function LanguageSelectionScreen({
               <Globe size={18} color="#2563eb" />
             </View>
             <View>
-              <Text style={styles.cardTitle}>Seleccionar idioma</Text>
+              <Text style={styles.cardTitle}>{t("language.select")}</Text>
               <Text style={styles.cardDescription}>
-                Elige el idioma que prefieres para la interfaz de ChatApp
+                {t("language.description")}
               </Text>
             </View>
           </View>
@@ -152,8 +158,8 @@ export function LanguageSelectionScreen({
                       <Text style={styles.flag}>{language.flag}</Text>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.langNative}>{language.nativeName}</Text>
-                        <Text style={styles.langName}>{language.name}</Text>
-                        <Text style={styles.langDesc}>{language.description}</Text>
+                        <Text style={styles.langName}>{t(`language.${language.name.toLowerCase()}`)}</Text>
+                        <Text style={styles.langDesc}>{t(language.description)}</Text>
                       </View>
                     </View>
                   </View>
@@ -162,7 +168,7 @@ export function LanguageSelectionScreen({
                   {isCurrent ? (
                     <View style={styles.currentWrap}>
                       <Check size={16} color="#059669" />
-                      <Text style={styles.currentText}>Actual</Text>
+                      <Text style={styles.currentText}>{t("language.current")}</Text>
                     </View>
                   ) : null}
                 </TouchableOpacity>
@@ -172,9 +178,8 @@ export function LanguageSelectionScreen({
 
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
-              <Text style={{ fontWeight: "700" }}>Nota: </Text>
-              Al cambiar el idioma, la aplicación se reiniciará automáticamente para aplicar los cambios en toda la
-              interfaz.
+              <Text style={{ fontWeight: "700" }}>{t("language.note").split(":")[0]}: </Text>
+              {t("language.note").split(":").slice(1).join(":")}
             </Text>
           </View>
         </View>

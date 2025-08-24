@@ -1,7 +1,7 @@
 
 
 export const api = {
-  API_URL: "http://localhost:3000",
+  API_URL: "http://192.168.1.11:3000",
 
   get: async (endpoint: string) => {
     const res = await fetch(`${api.API_URL}${endpoint}`);

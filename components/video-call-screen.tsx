@@ -17,6 +17,7 @@ import {
   Minimize2,
   MessageCircle,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface Participant {
   id: string;
@@ -44,6 +45,7 @@ export function VideoCallScreen({
   onToggleVideo,
   onOpenChat,
 }: VideoCallScreenProps) {
+  const { t } = useTranslation();
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -95,12 +97,12 @@ export function VideoCallScreen({
             <Text style={styles.avatarFallback}>
               {others[0]?.name?.charAt(0).toUpperCase() || "U"}
             </Text>
-            <Text style={styles.videoName}>{others[0]?.name || "Usuario"}</Text>
+            <Text style={styles.videoName}>{others[0]?.name || t("videoCall.user", "Usuario")}</Text>
           </View>
         ) : (
           <View style={styles.videoOff}>
             <VideoOff size={32} color="#9ca3af" />
-            <Text style={styles.videoOffText}>Cámara desactivada</Text>
+            <Text style={styles.videoOffText}>{t("videoCall.cameraOff", "Cámara desactivada")}</Text>
           </View>
         )}
 
@@ -160,7 +162,7 @@ export function VideoCallScreen({
           </Text>
           {isGroupCall && (
             <Text style={styles.participantsBadge}>
-              {participants.length} participantes
+              {participants.length} {t("videoCall.participants", "participantes")}
             </Text>
           )}
           <View style={styles.topButtons}>

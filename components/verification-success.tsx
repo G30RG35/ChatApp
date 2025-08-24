@@ -5,15 +5,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface VerificationSuccessProps {
   onContinue: () => void;
 }
 
 export function VerificationSuccess({ onContinue }: VerificationSuccessProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
@@ -22,38 +24,41 @@ export function VerificationSuccess({ onContinue }: VerificationSuccessProps) {
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={32} color="#34C759" />
           </View>
-          <Text style={styles.title}>¡Verificación exitosa!</Text>
+          <Text style={styles.title}>{t("verificationSuccess.title", "¡Verificación exitosa!")}</Text>
           <Text style={styles.description}>
-            Tu cuenta ha sido verificada correctamente. Ya puedes acceder a todas las funciones de ChatApp.
+            {t(
+              "verificationSuccess.description",
+              "Tu cuenta ha sido verificada correctamente. Ya puedes acceder a todas las funciones de ChatApp."
+            )}
           </Text>
         </View>
 
         {/* Content */}
         <View style={styles.content}>
           <View style={styles.featuresContainer}>
-            <Text style={styles.featuresTitle}>¿Qué puedes hacer ahora?</Text>
+            <Text style={styles.featuresTitle}>{t("verificationSuccess.featuresTitle", "¿Qué puedes hacer ahora?")}</Text>
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
                 <Text style={styles.featureBullet}>•</Text>
-                <Text style={styles.featureText}>Enviar y recibir mensajes</Text>
+                <Text style={styles.featureText}>{t("verificationSuccess.feature1", "Enviar y recibir mensajes")}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureBullet}>•</Text>
-                <Text style={styles.featureText}>Agregar contactos</Text>
+                <Text style={styles.featureText}>{t("verificationSuccess.feature2", "Agregar contactos")}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureBullet}>•</Text>
-                <Text style={styles.featureText}>Personalizar tu perfil</Text>
+                <Text style={styles.featureText}>{t("verificationSuccess.feature3", "Personalizar tu perfil")}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureBullet}>•</Text>
-                <Text style={styles.featureText}>Recibir notificaciones</Text>
+                <Text style={styles.featureText}>{t("verificationSuccess.feature4", "Recibir notificaciones")}</Text>
               </View>
             </View>
           </View>
 
           <TouchableOpacity style={styles.continueButton} onPress={onContinue}>
-            <Text style={styles.continueButtonText}>Continuar a ChatApp</Text>
+            <Text style={styles.continueButtonText}>{t("verificationSuccess.continue", "Continuar a ChatApp")}</Text>
             <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -63,7 +68,8 @@ export function VerificationSuccess({ onContinue }: VerificationSuccessProps) {
 }
 
 const styles = StyleSheet.create({
- container: {marginTop: 20,
+  container: {
+    marginTop: 20,
     flex: 1,
     backgroundColor: '#F2F2F7',
     justifyContent: 'center',

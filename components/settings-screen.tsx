@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../utils/utils";
+import { useTranslation } from "react-i18next";
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -37,6 +38,7 @@ export function SettingsScreen({
   onOpenLanguageModal,
   userId,
 }: SettingsScreenProps) {
+  const { t, i18n } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,7 +53,10 @@ export function SettingsScreen({
       const data = await api.get(`/usuarios/${userId}`);
       setProfile(data);
     } catch {
-      Alert.alert("Error", "No se pudo cargar el perfil.");
+      Alert.alert(
+        t("settings.error", "Error"),
+        t("settings.profileLoadError", "No se pudo cargar el perfil.")
+      );
     } finally {
       setLoading(false);
     }
@@ -59,8 +64,8 @@ export function SettingsScreen({
 
   const getLanguageDisplay = (code: string) => {
     const languages = {
-      es: { flag: "🇪🇸", name: "Español" },
-      en: { flag: "🇺🇸", name: "English" },
+      es: { flag: "🇪🇸", name: t("language.spanish", "Español") },
+      en: { flag: "🇺🇸", name: t("language.english", "English") },
       fr: { flag: "🇫🇷", name: "Français" },
       de: { flag: "🇩🇪", name: "Deutsch" },
       it: { flag: "🇮🇹", name: "Italiano" },
@@ -82,28 +87,34 @@ export function SettingsScreen({
     }[];
   }[] = [
     {
-      category: "Cuenta",
+      category: t("settings.account", "Cuenta"),
       items: [
         {
           icon: "person",
-          title: "Perfil",
-          description: "Edita tu información personal",
+          title: t("settings.profile", "Perfil"),
+          description: t(
+            "settings.editProfile",
+            "Edita tu información personal"
+          ),
           action: onOpenProfile,
         },
         {
           icon: "lock-closed",
-          title: "Cambiar contraseña",
-          description: "Actualiza tu contraseña de acceso",
+          title: t("settings.changePassword", "Cambiar contraseña"),
+          description: t(
+            "settings.updatePassword",
+            "Actualiza tu contraseña de acceso"
+          ),
           action: onOpenChangePassword,
         },
       ],
     },
     {
-      category: "Apariencia",
+      category: t("settings.appearance", "Apariencia"),
       items: [
         {
           icon: "globe",
-          title: "Idioma",
+          title: t("settings.language", "Idioma"),
           description: getLanguageDisplay(currentLanguage),
           action: onOpenLanguage,
         },
@@ -115,10 +126,14 @@ export function SettingsScreen({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Configuración</Text>
+        <Text style={styles.headerTitle}>
+          {t("settings.title", "Configuración")}
+        </Text>
         <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
           <Ionicons name="log-out-outline" size={16} color="#dc2626" />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
+          <Text style={styles.logoutText}>
+            {t("settings.logout", "Cerrar sesión")}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -141,14 +156,18 @@ export function SettingsScreen({
         </View>
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>
-            {loading ? "Cargando..." : profile?.username || "Usuario"}
+            {loading
+              ? t("settings.loading", "Cargando...")
+              : profile?.username || t("settings.user", "Usuario")}
           </Text>
           <Text style={styles.profileEmail}>
             {loading ? "" : profile?.email || ""}
           </Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>
-              {profile?.status === "online" ? "En línea" : "Desconectado"}
+              {profile?.status === "online"
+                ? t("settings.online", "En línea")
+                : t("settings.offline", "Desconectado")}
             </Text>
           </View>
         </View>

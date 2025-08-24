@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface GroupMessage {
   id: string;
@@ -52,10 +53,11 @@ export function GroupChatScreen({
   onVoiceCall,
   onGroupInfo,
 }: GroupChatScreenProps) {
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<GroupMessage[]>([
     {
       id: "1",
-      text: "¡Hola equipo! ¿Cómo van con el proyecto?",
+      text: t("groupChat.demo1", "¡Hola equipo! ¿Cómo van con el proyecto?"),
       sender: {
         id: "1",
         name: "Ana García",
@@ -65,7 +67,7 @@ export function GroupChatScreen({
     },
     {
       id: "2",
-      text: "Todo bien por aquí, ya terminé mi parte",
+      text: t("groupChat.demo2", "Todo bien por aquí, ya terminé mi parte"),
       sender: {
         id: "2",
         name: "Carlos López",
@@ -75,17 +77,17 @@ export function GroupChatScreen({
     },
     {
       id: "3",
-      text: "Perfecto, yo también estoy casi listo",
+      text: t("groupChat.demo3", "Perfecto, yo también estoy casi listo"),
       sender: {
         id: "me",
-        name: "Tú",
+        name: t("groupChat.you", "Tú"),
       },
       timestamp: "10:35",
       status: "read",
     },
     {
       id: "4",
-      text: "Genial, entonces podemos hacer la reunión mañana",
+      text: t("groupChat.demo4", "Genial, entonces podemos hacer la reunión mañana"),
       sender: {
         id: "3",
         name: "María Rodríguez",
@@ -113,9 +115,9 @@ export function GroupChatScreen({
         text: newMessage,
         sender: {
           id: "me",
-          name: "Tú",
+          name: t("groupChat.you", "Tú"),
         },
-        timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+        timestamp: new Date().toLocaleTimeString(i18n.language === "en" ? "en-US" : "es-ES", { hour: "2-digit", minute: "2-digit" }),
         status: "sent",
       };
       setMessages([...messages, message]);
@@ -148,7 +150,6 @@ export function GroupChatScreen({
 
   const AvatarComponent = ({ name, avatar, size = 40 }: { name: string, avatar?: string, size?: number }) => {
     const initials = name.charAt(0).toUpperCase();
-    
     return (
       <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
         {avatar ? (
@@ -172,7 +173,9 @@ export function GroupChatScreen({
   };
 
   const onlineMembers = members.filter((member) => member.isOnline);
-  const typingText = isTyping.length > 0 ? `${isTyping.join(", ")} escribiendo...` : `${onlineMembers.length} en línea`;
+  const typingText = isTyping.length > 0
+    ? `${isTyping.join(", ")} ${t("groupChat.typing", "escribiendo...")}`
+    : `${onlineMembers.length} ${t("groupChat.online", "en línea")}`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -274,7 +277,7 @@ export function GroupChatScreen({
             style={styles.textInput}
             value={newMessage}
             onChangeText={setNewMessage}
-            placeholder="Escribe un mensaje..."
+            placeholder={t("groupChat.inputPlaceholder", "Escribe un mensaje...")}
             multiline
             maxLength={500}
           />

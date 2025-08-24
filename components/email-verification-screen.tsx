@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../utils/utils';
+import { useTranslation } from 'react-i18next';
 
 interface EmailVerificationScreenProps {
   email: string;
@@ -23,6 +24,7 @@ export function EmailVerificationScreen({
   onBackToSignUp,
   onVerificationSuccess,
 }: EmailVerificationScreenProps) {
+  const { t } = useTranslation();
   const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,10 +42,10 @@ export function EmailVerificationScreen({
       if (res.success) {
         onVerificationSuccess();
       } else {
-        setError(res.error || 'Código incorrecto. Intenta de nuevo.');
+        setError(res.error || t('emailVerification.invalidCode', 'Código incorrecto. Intenta de nuevo.'));
       }
     } catch {
-      setError('Error de red. Intenta de nuevo.');
+      setError(t('emailVerification.networkError', 'Error de red. Intenta de nuevo.'));
     }
     setIsLoading(false);
   };
@@ -55,10 +57,10 @@ export function EmailVerificationScreen({
     try {
       const res = await api.post('/reenviar-codigo', { email });
       if (!res.success) {
-        setError(res.error || 'No se pudo reenviar el código.');
+        setError(res.error || t('emailVerification.resendError', 'No se pudo reenviar el código.'));
       }
     } catch {
-      setError('Error de red al reenviar el código.');
+      setError(t('emailVerification.resendNetworkError', 'Error de red al reenviar el código.'));
     }
     setIsResending(false);
   };
@@ -72,9 +74,9 @@ export function EmailVerificationScreen({
             <View style={styles.iconContainer}>
               <Ionicons name="mail" size={24} color="#34C759" />
             </View>
-            <Text style={styles.title}>Verifica tu email</Text>
+            <Text style={styles.title}>{t('emailVerification.title', 'Verifica tu email')}</Text>
             <Text style={styles.description}>
-              Hemos enviado un código de verificación a
+              {t('emailVerification.sent', 'Hemos enviado un código de verificación a')}
             </Text>
             <Text style={styles.emailText}>{email}</Text>
           </View>
@@ -84,7 +86,7 @@ export function EmailVerificationScreen({
             <View style={styles.inputContainer}>
               <TextInput
                 style={[styles.input, verificationCode.length === 6 && styles.inputValid]}
-                placeholder="Ingresa el código de 6 dígitos"
+                placeholder={t('emailVerification.codePlaceholder', 'Ingresa el código de 6 dígitos')}
                 placeholderTextColor="#8E8E93"
                 value={verificationCode}
                 onChangeText={setVerificationCode}
@@ -96,7 +98,7 @@ export function EmailVerificationScreen({
               {error ? (
                 <Text style={styles.errorText}>{error}</Text>
               ) : (
-                <Text style={styles.hintText}>Ingresa el código de 6 dígitos</Text>
+                <Text style={styles.hintText}>{t('emailVerification.codeHint', 'Ingresa el código de 6 dígitos')}</Text>
               )}
             </View>
 
@@ -111,20 +113,20 @@ export function EmailVerificationScreen({
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.verifyButtonText}>Verificar código</Text>
+                <Text style={styles.verifyButtonText}>{t('emailVerification.verify', 'Verificar código')}</Text>
               )}
             </TouchableOpacity>
 
             {/* Resend Code */}
             <View style={styles.resendContainer}>
-              <Text style={styles.resendText}>¿No recibiste el código?</Text>
+              <Text style={styles.resendText}>{t('emailVerification.notReceived', '¿No recibiste el código?')}</Text>
               <TouchableOpacity
                 onPress={handleResendCode}
                 disabled={isResending}
                 style={styles.resendButton}
               >
                 <Text style={styles.resendButtonText}>
-                  {isResending ? 'Reenviando...' : 'Reenviar código'}
+                  {isResending ? t('emailVerification.resending', 'Reenviando...') : t('emailVerification.resend', 'Reenviar código')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -135,7 +137,7 @@ export function EmailVerificationScreen({
               onPress={onBackToSignUp}
             >
               <Ionicons name="arrow-back" size={18} color="#007AFF" />
-              <Text style={styles.backButtonText}>Volver al registro</Text>
+              <Text style={styles.backButtonText}>{t('button.back', 'Volver al registro')}</Text>
             </TouchableOpacity>
           </View>
         </View>

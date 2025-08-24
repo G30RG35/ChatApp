@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../utils/utils";
+import { useTranslation } from "react-i18next";
 
 export interface Contact {
   id: string;
@@ -35,6 +36,7 @@ export function ContactsScreen({
   onVoiceCall: (contact: Contact) => void;
   userId: string;
 }) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -62,7 +64,7 @@ export function ContactsScreen({
         }))
       );
     } catch {
-      Alert.alert("Error", "No se pudieron cargar los contactos.");
+      Alert.alert(t("contacts.errorTitle", "Error"), t("contacts.errorLoad", "No se pudieron cargar los contactos."));
     } finally {
       setLoading(false);
     }
@@ -81,14 +83,14 @@ export function ContactsScreen({
   // Agregar contacto usando el endpoint del backend
   const handleAddContact = async () => {
     if (!newName.trim() || !newPhone.trim()) {
-      setError("Nombre y número/email son requeridos");
+      setError(t("contacts.requiredFields", "Nombre y número/email son requeridos"));
       return;
     }
     try {
       // Buscar el usuario por nombre de usuario o email
       const found = (await findUser(newName.trim())) || (await findUser(newPhone.trim()));
       if (!found) {
-        setError("No existe un usuario con ese nombre o email");
+        setError(t("contacts.notFound", "No existe un usuario con ese nombre o email"));
         return;
       }
       // Llama al endpoint para agregar contacto
@@ -107,7 +109,7 @@ export function ContactsScreen({
       setError("");
       fetchContacts();
     } catch {
-      setError("Error de red o usuario no encontrado");
+      setError(t("contacts.networkError", "Error de red o usuario no encontrado"));
     }
   };
 
@@ -156,7 +158,7 @@ export function ContactsScreen({
           <View style={styles.logo}>
             <Ionicons name="people" size={24} color="#FFFFFF" />
           </View>
-          <Text style={styles.headerTitle}>Contactos</Text>
+          <Text style={styles.headerTitle}>{t("contacts.title", "Contactos")}</Text>
         </View>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
           <Ionicons name="person-add" size={24} color="#007AFF" />
@@ -168,7 +170,7 @@ export function ContactsScreen({
         <Ionicons name="search" size={18} color="#888" style={{ marginRight: 8 }} />
         <TextInput
           style={{ flex: 1 }}
-          placeholder="Buscar contactos..."
+          placeholder={t("contacts.searchPlaceholder", "Buscar contactos...")}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -180,11 +182,11 @@ export function ContactsScreen({
       ) : filteredContacts.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="people-outline" size={64} color="#aaa" />
-          <Text style={styles.emptyTitle}>No hay contactos</Text>
-          <Text style={styles.emptyDesc}>Agrega contactos para comenzar a chatear</Text>
+          <Text style={styles.emptyTitle}>{t("contacts.emptyTitle", "No hay contactos")}</Text>
+          <Text style={styles.emptyDesc}>{t("contacts.emptyDesc", "Agrega contactos para comenzar a chatear")}</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
             <Ionicons name="person-add" size={20} color="#fff" />
-            <Text style={styles.addBtnText}> Agregar contacto</Text>
+            <Text style={styles.addBtnText}> {t("contacts.add", "Agregar contacto")}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -212,16 +214,16 @@ export function ContactsScreen({
           style={styles.modalContainer}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Agregar contacto</Text>
+            <Text style={styles.modalTitle}>{t("contacts.add", "Agregar contacto")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Nombre de usuario o email"
+              placeholder={t("contacts.usernameOrEmail", "Nombre de usuario o email")}
               value={newName}
               onChangeText={setNewName}
             />
             <TextInput
               style={styles.input}
-              placeholder="Número o email"
+              placeholder={t("contacts.phoneOrEmail", "Número o email")}
               value={newPhone}
               onChangeText={setNewPhone}
               keyboardType="default"
@@ -237,10 +239,10 @@ export function ContactsScreen({
                   setNewPhone("");
                 }}
               >
-                <Text style={[styles.addBtnText, { color: "#007AFF" }]}>Cancelar</Text>
+                <Text style={[styles.addBtnText, { color: "#007AFF" }]}>{t("button.cancel", "Cancelar")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.addBtn} onPress={handleAddContact}>
-                <Text style={styles.addBtnText}>Agregar</Text>
+                <Text style={styles.addBtnText}>{t("contacts.add", "Agregar")}</Text>
               </TouchableOpacity>
             </View>
           </View>
