@@ -1,91 +1,64 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
   ScrollView,
   Image,
-  StyleSheet,
   SafeAreaView,
-  ActivityIndicator,
   Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { api } from "../utils/utils";
 
 interface UserProfileScreenProps {
+  userId: string;
   onBack: () => void;
 }
 
 interface ProfileData {
-  firstName: string;
-  lastName: string;
+  id: string;
   username: string;
   email: string;
-  phone: string;
-  bio: string;
+  avatar?: string;
 }
 
 interface FormErrors {
-  firstName?: string;
-  lastName?: string;
   username?: string;
   email?: string;
   general?: string;
 }
 
-export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
-  const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: "Juan",
-    lastName: "Pérez",
-    username: "juan_perez",
-    email: "juan.perez@email.com",
-    phone: "+1 234 567 8900",
-    bio: "Desarrollador apasionado por la tecnología y la innovación.",
-  });
-
+export function UserProfileScreen({ userId, onBack }: UserProfileScreenProps) {
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
-    if (!profileData.firstName.trim()) {
-      newErrors.firstName = "El nombre es requerido";
-    }
-
-    if (!profileData.lastName.trim()) {
-      newErrors.lastName = "El apellido es requerido";
-    }
-
-    if (!profileData.username.trim()) {
-      newErrors.username = "El nombre de usuario es requerido";
-    } else if (profileData.username.length < 3) {
-      newErrors.username = "El nombre de usuario debe tener al menos 3 caracteres";
-    } else if (!/^[a-zA-Z0-9_]+$/.test(profileData.username)) {
-      newErrors.username = "Solo se permiten letras, números y guiones bajos";
-    }
-
-    if (!profileData.email.trim()) {
-      newErrors.email = "El email es requerido";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-      newErrors.email = "Ingresa un email válido";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (field: keyof ProfileData, value: string) => {
-    setProfileData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field as keyof FormErrors]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+  const fetchProfile = async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.get(`/usuarios/${userId}`);
+      setProfile(data);
+    } catch {
+      setErrors({ general: "No se pudo cargar el perfil" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!profile?.username?.trim() || !profile?.email?.trim()) {
+      setErrors({ general: "El nombre de usuario y el email son requeridos" });
+      return;
+    }
 
     setIsLoading(true);
     setErrors({});
@@ -94,7 +67,7 @@ export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
       // Simular llamada a API
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      console.log("Perfil actualizado:", profileData);
+      console.log("Perfil actualizado:", profile);
       setIsSuccess(true);
 
       // Volver automáticamente después de 2 segundos
@@ -110,12 +83,12 @@ export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
   };
 
   const AvatarComponent = () => {
-    const initials = `${profileData.firstName[0]}${profileData.lastName[0]}`;
+    const initials = `${profile?.username[0]}`;
     
     return (
       <View style={styles.avatar}>
         <Image 
-          source={{ uri: "https://placekitten.com/80/80" }} 
+          source={{ uri: profile?.avatar || "https://placekitten.com/80/80" }} 
           style={styles.avatarImage} 
         />
         <View style={styles.avatarFallback}>
@@ -145,6 +118,25 @@ export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
           </Text>
         </View>
       </SafeAreaView>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{errors.general || "Perfil no encontrado"}</Text>
+        <TouchableOpacity onPress={onBack} style={styles.backButtonContainer}>
+          <Text style={styles.backButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
@@ -200,56 +192,85 @@ export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
           <View style={styles.row}>
             <View style={[styles.inputContainer, styles.halfInput]}>
               <Text style={styles.label}>Nombre</Text>
-              <View style={[styles.inputWrapper, errors.firstName && styles.inputError]}>
+              <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
                 <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  value={profileData.firstName}
-                  onChangeText={(value) => handleInputChange("firstName", value)}
-                  placeholder="Nombre"
+                  value={profile.username}
+                  onChangeText={(value) =>
+                    setProfile((prev) =>
+                      prev
+                        ? { ...prev, username: value }
+                        : { id: "", username: value, email: "" }
+                    )
+                  }
+                  placeholder="Nombre de usuario"
+                  editable={false}
                 />
               </View>
-              {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+              {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
             </View>
 
             <View style={[styles.inputContainer, styles.halfInput]}>
               <Text style={styles.label}>Apellido</Text>
-              <View style={[styles.inputWrapper, errors.lastName && styles.inputError]}>
+              <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
                 <Ionicons name="person" size={20} color="#8E8E93" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  value={profileData.lastName}
-                  onChangeText={(value) => handleInputChange("lastName", value)}
+                  value={profile.username}
+                  onChangeText={(value) =>
+                    setProfile((prev) =>
+                      prev
+                        ? { ...prev, email: value }
+                        : { id: "", username: "", email: value }
+                    )
+                  }
                   placeholder="Apellido"
+                  editable={false}
                 />
               </View>
-              {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
             </View>
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nombre de usuario</Text>
-            <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
-              <Ionicons name="at" size={20} color="#8E8E93" style={styles.inputIcon} />
+            <Text style={styles.label}>Email</Text>
+            <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
+              <Ionicons name="mail" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                value={profileData.username}
-                onChangeText={(value) => handleInputChange("username", value)}
-                placeholder="Nombre de usuario"
+                value={profile.email}
+                onChangeText={(value) =>
+                  setProfile((prev) =>
+                    prev
+                      ? { ...prev, email: value }
+                      : { id: "", username: "", email: value }
+                  )
+                }
+                placeholder="Email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={false}
               />
             </View>
-            {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Biografía</Text>
             <TextInput
               style={[styles.textArea, styles.input]}
-              value={profileData.bio}
-              onChangeText={(value) => handleInputChange("bio", value)}
+              value={profile.username}
+              onChangeText={(value) =>
+                setProfile((prev) =>
+                  prev
+                    ? { ...prev, email: value }
+                    : { id: "", username: "", email: value }
+                )
+              }
               placeholder="Cuéntanos algo sobre ti..."
               multiline
               numberOfLines={3}
+              editable={false}
             />
           </View>
         </View>
@@ -259,31 +280,22 @@ export function UserProfileScreen({ onBack }: UserProfileScreenProps) {
           <Text style={styles.cardTitle}>Información de contacto</Text>
           
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-              <Ionicons name="mail" size={20} color="#8E8E93" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={profileData.email}
-                onChangeText={(value) => handleInputChange("email", value)}
-                placeholder="Email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-          </View>
-
-          <View style={styles.inputContainer}>
             <Text style={styles.label}>Teléfono</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="call" size={20} color="#8E8E93" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                value={profileData.phone}
-                onChangeText={(value) => handleInputChange("phone", value)}
+                value={profile.username}
+                onChangeText={(value) =>
+                  setProfile((prev) =>
+                    prev
+                      ? { ...prev, email: value }
+                      : { id: "", username: "", email: value }
+                  )
+                }
                 placeholder="Teléfono"
                 keyboardType="phone-pad"
+                editable={false}
               />
             </View>
           </View>
@@ -312,6 +324,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
   },
+  backButtonContainer: { backgroundColor: "#007AFF", padding: 14, borderRadius: 8, alignItems: "center" },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -343,7 +356,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
   },
-  errorText: {
+  errorTextInline: {
     color: '#FF3B30',
     marginLeft: 8,
     fontSize: 14,
@@ -479,4 +492,9 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textAlign: 'center',
   },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 24, textAlign: "center" },
+  profileCard: { backgroundColor: "#f2f2f7", borderRadius: 12, padding: 20, marginBottom: 24 },
+  errorText: { color: "#FF3B30", fontSize: 16, marginBottom: 16 },
+  backButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });

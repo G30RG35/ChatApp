@@ -1,12 +1,15 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { api } from "../utils/utils";
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -15,6 +18,14 @@ interface SettingsScreenProps {
   onOpenLanguage: () => void;
   currentLanguage?: string;
   onOpenLanguageModal: () => void;
+  userId: string;
+}
+
+interface UserProfile {
+  username: string;
+  email: string;
+  avatar?: string;
+  status?: string;
 }
 
 export function SettingsScreen({
@@ -24,7 +35,28 @@ export function SettingsScreen({
   onOpenLanguage,
   currentLanguage = "es",
   onOpenLanguageModal,
+  userId,
 }: SettingsScreenProps) {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Obtener datos del usuario al montar
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get(`/usuarios/${userId}`);
+      setProfile(data);
+    } catch {
+      Alert.alert("Error", "No se pudo cargar el perfil.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getLanguageDisplay = (code: string) => {
     const languages = {
       es: { flag: "🇪🇸", name: "Español" },
@@ -93,13 +125,31 @@ export function SettingsScreen({
       {/* Profile Section */}
       <View style={styles.profileSection}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarFallback}>JD</Text>
+          {loading ? (
+            <ActivityIndicator color="#007AFF" />
+          ) : (
+            <Text style={styles.avatarFallback}>
+              {profile?.username
+                ? profile.username
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                : "?"}
+            </Text>
+          )}
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>Juan Pérez</Text>
-          <Text style={styles.profileEmail}>juan.perez@email.com</Text>
+          <Text style={styles.profileName}>
+            {loading ? "Cargando..." : profile?.username || "Usuario"}
+          </Text>
+          <Text style={styles.profileEmail}>
+            {loading ? "" : profile?.email || ""}
+          </Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>En línea</Text>
+            <Text style={styles.badgeText}>
+              {profile?.status === "online" ? "En línea" : "Desconectado"}
+            </Text>
           </View>
         </View>
       </View>
@@ -137,7 +187,7 @@ export function SettingsScreen({
 }
 
 const styles = StyleSheet.create({
- container: {marginTop: 20, flex: 1, backgroundColor: "#fff" },
+  container: { marginTop: 20, flex: 1, backgroundColor: "#fff" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

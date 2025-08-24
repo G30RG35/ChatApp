@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
+import { api } from "../utils/utils"; // Usa tu helper de API
 
 interface SignUpFormProps {
   onSwitchToSignIn: () => void;
@@ -62,10 +63,20 @@ export function SignUpForm({
     setErrors({});
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simula API
-      onAuthSuccess(email);
+      // Llama al endpoint de registro de usuario
+      const data = await api.post("/usuarios", {
+        username,
+        email,
+        password,
+      });
+
+      if (data && data.id) {
+        onAuthSuccess(email);
+      } else {
+        setErrors({ general: data.error || "Error al crear la cuenta. Inténtalo de nuevo." });
+      }
     } catch {
-      setErrors({ general: "Error al crear la cuenta. Inténtalo de nuevo." });
+      setErrors({ general: "Error de red. Inténtalo de nuevo." });
     } finally {
       setIsLoading(false);
     }

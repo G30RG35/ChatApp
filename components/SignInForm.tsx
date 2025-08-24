@@ -8,9 +8,9 @@ import {
   StyleSheet,
   SafeAreaView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/utils'; // Importa tu helper de API
 
 interface FormData {
   email: string;
@@ -26,7 +26,7 @@ interface FormErrors {
 interface SignInFormProps {
   onSwitchToSignUp: () => void;
   onSwitchToForgotPassword: () => void;
-  onAuthSuccess: () => void;
+  onAuthSuccess: (user?: any) => void;
 }
 
 export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthSuccess }: SignInFormProps) {
@@ -43,14 +43,12 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Validar email
     if (!formData.email.trim()) {
       newErrors.email = "El email es requerido";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Ingresa un email válido";
     }
 
-    // Validar password
     if (!formData.password) {
       newErrors.password = "La contraseña es requerida";
     }
@@ -61,34 +59,36 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
   const handleSubmit = async () => {
-
-    setIsSuccess(true);
-
-    // if (!validateForm()) return;
+    if (!validateForm()) return;
 
     setIsLoading(true);
     setErrors({});
+    try {
+      // Llama al endpoint de login
+      const data = await api.post("/login", {
+        email: formData.email,
+        password: formData.password,
+      });
 
-    // try {
-    //   // Simular llamada a API
-    //   await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    //   // Aquí iría la lógica real de login
-    //   console.log("Datos de login:", formData);
-
-      setIsSuccess(true);
-    // } catch (error) {
-    //   setErrors({ general: "Email o contraseña incorrectos. Inténtalo de nuevo." });
-    // } finally {
-    //   setIsLoading(false);
-    // }
+      if (data && data.id) {
+        setIsSuccess(true);
+        setTimeout(() => {
+          onAuthSuccess(data); // Puedes pasar el usuario si lo necesitas
+        }, 800);
+      } else {
+        setErrors({ general: data.error || "Email o contraseña incorrectos. Inténtalo de nuevo." });
+      }
+    } catch (error) {
+      setErrors({ general: "Error de red. Intenta de nuevo." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSuccess) {
@@ -100,7 +100,7 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
           </View>
           <Text style={styles.successTitle}>¡Bienvenido de vuelta!</Text>
           <Text style={styles.successMessage}>Has iniciado sesión exitosamente</Text>
-          <TouchableOpacity style={styles.successButton} onPress={onAuthSuccess}>
+          <TouchableOpacity style={styles.successButton} onPress={() => onAuthSuccess()}>
             <Text style={styles.successButtonText}>Ir a mensajes</Text>
           </TouchableOpacity>
         </View>

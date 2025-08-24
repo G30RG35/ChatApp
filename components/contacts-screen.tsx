@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,11 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { api } from "../utils/utils"; // Importa tu helper de API
 
 export interface Contact {
   id: string;
@@ -23,44 +26,86 @@ export interface Contact {
   isOnline?: boolean;
 }
 
-const mockContacts: Contact[] = [
-  {
-    id: "1",
-    name: "Ana García",
-    avatar: "https://placehold.co/100x100",
-    phone: "+34 612 345 678",
-    status: "online",
-  },
-  {
-    id: "2",
-    name: "Carlos López",
-    avatar: "https://placehold.co/100x100",
-    phone: "+34 687 654 321",
-    status: "offline",
-    lastSeen: "Hace 2 horas",
-  },
-  {
-    id: "3",
-    name: "María Rodríguez",
-    avatar: "https://placehold.co/100x100",
-    phone: "+34 698 123 456",
-    status: "online",
-  },
-];
-
 export function ContactsScreen({
   onStartChat,
   onVoiceCall,
+  userId, // <-- Asegúrate de pasar el userId del usuario autenticado
 }: {
   onStartChat: (contact: Contact) => void;
   onVoiceCall: (contact: Contact) => void;
+  userId: string;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // Obtener contactos desde el backend
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  const fetchContacts = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get(`/contactos/${userId}`);
+      // El backend devuelve: id, contact_id, name, email, avatar, nickname, created_at
+      setContacts(
+        data.map((c: any) => ({
+          id: c.contact_id,
+          name: c.name,
+          avatar: c.avatar || "https://placehold.co/100x100",
+          phone: c.email, // O usa otro campo si tienes el teléfono
+          status: "offline", // Puedes ajustar esto si tienes el estado real
+        }))
+      );
+    } catch {
+      Alert.alert("Error", "No se pudieron cargar los contactos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Agregar contacto usando el endpoint del backend
+  const handleAddContact = async () => {
+    if (!newName.trim() || !newPhone.trim()) {
+      setError("Nombre y número son requeridos");
+      return;
+    }
+    try {
+      // Buscar el usuario por email o teléfono (deberías tener un endpoint para esto)
+      const users = await api.get(`/usuarios`);
+      const found = users.find(
+        (u: any) =>
+          u.username.toLowerCase() === newName.trim().toLowerCase() ||
+          u.email === newPhone.trim() // O compara con el campo correcto
+      );
+      if (!found) {
+        setError("No existe un usuario con ese nombre o número/email");
+        return;
+      }
+      // Llama al endpoint para agregar contacto
+      const res = await api.post("/contactos", {
+        user_id: userId,
+        contact_id: found.id,
+        nickname: newName.trim(),
+      });
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setModalVisible(false);
+      setNewName("");
+      setNewPhone("");
+      setError("");
+      fetchContacts();
+    } catch {
+      setError("Error de red o usuario no encontrado");
+    }
+  };
 
   const filteredContacts = contacts.filter(
     (c) =>
@@ -76,32 +121,6 @@ export function ContactsScreen({
     onStartChat(contact);
   };
 
-  const handleAddContact = () => {
-    if (!newName.trim() || !newPhone.trim()) {
-      setError("Nombre y número son requeridos");
-      return;
-    }
-    const exists = contacts.some(
-      (c) => c.phone.trim() === newPhone.trim() || c.name.trim().toLowerCase() === newName.trim().toLowerCase()
-    );
-    if (exists) {
-      setError("El contacto ya existe");
-      return;
-    }
-    const newContact: Contact = {
-      id: (contacts.length + 1).toString(),
-      name: newName.trim(),
-      avatar: "https://placehold.co/100x100",
-      phone: newPhone.trim(),
-      status: "offline",
-    };
-    setContacts([newContact, ...contacts]);
-    setNewName("");
-    setNewPhone("");
-    setError("");
-    setModalVisible(false);
-  };
-
   const renderContact = ({ item }: { item: Contact }) => (
     <View style={styles.contactCard}>
       <View style={styles.avatarContainer}>
@@ -113,9 +132,6 @@ export function ContactsScreen({
           <Text style={styles.contactName}>{item.name}</Text>
         </View>
         <Text style={styles.phone}>{item.phone}</Text>
-        {item.status === "offline" && item.lastSeen && (
-          <Text style={styles.lastSeen}>{item.lastSeen}</Text>
-        )}
       </View>
       <View style={styles.actions}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => handleCall(item)}>
@@ -155,7 +171,9 @@ export function ContactsScreen({
       </View>
 
       {/* Lista */}
-      {filteredContacts.length === 0 ? (
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} color="#007AFF" />
+      ) : filteredContacts.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="people-outline" size={64} color="#aaa" />
           <Text style={styles.emptyTitle}>No hay contactos</Text>
@@ -193,16 +211,16 @@ export function ContactsScreen({
             <Text style={styles.modalTitle}>Agregar contacto</Text>
             <TextInput
               style={styles.input}
-              placeholder="Nombre"
+              placeholder="Nombre de usuario o email"
               value={newName}
               onChangeText={setNewName}
             />
             <TextInput
               style={styles.input}
-              placeholder="Número"
+              placeholder="Número o email"
               value={newPhone}
               onChangeText={setNewPhone}
-              keyboardType="phone-pad"
+              keyboardType="default"
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>

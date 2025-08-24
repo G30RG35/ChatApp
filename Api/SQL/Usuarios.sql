@@ -1,0 +1,23 @@
+CREATE TABLE users (
+    id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    avatar_url VARCHAR(500),
+    phone_number VARCHAR(20),
+    bio TEXT,
+    location VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'offline' CHECK (status IN ('online', 'offline', 'away')),
+    last_seen DATETIME DEFAULT GETDATE(),
+    language_code VARCHAR(10) DEFAULT 'es',
+    is_verified BIT DEFAULT 0,
+    verification_code VARCHAR(6),
+    verification_expires DATETIME,
+    created_at DATETIME DEFAULT GETDATE(),
+    updated_at DATETIME DEFAULT GETDATE(),
+    INDEX idx_email (email),
+    INDEX idx_username (username),
+    INDEX idx_status (status)
+);
