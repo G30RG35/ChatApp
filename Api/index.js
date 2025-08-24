@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const db = require('./db');
+const nodemailer = require('nodemailer');
 
 app.use(express.json());
 
@@ -164,6 +165,75 @@ app.post('/login', (req, res) => {
     if (results.length === 0) return res.status(401).json({ error: "Credenciales incorrectas" });
     res.json(results[0]);
   });
+});
+
+app.post('/enviar-codigo', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Falta el email" });
+
+  // Configuración de transporte (usa tus credenciales reales en producción)
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'tu-correo@gmail.com',
+      pass: 'tu-contraseña'
+    }
+  });
+
+  const mailOptions = {
+    from: 'tu-correo@gmail.com',
+    to: email,
+    subject: 'Código de verificación',
+    text: 'Tu código de verificación es: 123456'
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: "Código enviado" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Verificar código de email
+app.post('/verificar-email', (req, res) => {
+  const { email, code } = req.body;
+  // Aquí deberías validar el código real enviado al email
+  // Para pruebas, acepta "123456"
+  if (code === "123456") {
+    // Marca el email como verificado en la base de datos si lo deseas
+    return res.json({ success: true });
+  }
+  res.status(400).json({ success: false, error: "Código incorrecto" });
+});
+
+// Reenviar código de verificación a un nuevo correo
+app.post('/reenviar-codigo', async (req, res) => {
+  const { oldEmail, newEmail } = req.body;
+  if (!oldEmail || !newEmail) return res.status(400).json({ error: "Faltan emails requeridos" });
+
+  // Configuración de transporte (usa tus credenciales reales en producción)
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'correo@gmail.com',
+      pass: 'contraseña'
+    }
+  });
+
+  const mailOptions = {
+    from: 'tu-correo@gmail.com',
+    to: newEmail,
+    subject: 'Reenvío de código de verificación',
+    text: 'Tu código de verificación es: 123456'
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: "Código reenviado al nuevo correo" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Iniciar servidor

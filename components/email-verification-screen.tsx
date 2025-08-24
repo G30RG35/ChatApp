@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/utils';
 
 interface EmailVerificationScreenProps {
   email: string;
@@ -27,26 +28,39 @@ export function EmailVerificationScreen({
   const [error, setError] = useState('');
   const [isResending, setIsResending] = useState(false);
 
+  // Llama al endpoint para verificar el código
   const handleVerification = async () => {
     setIsLoading(true);
     setError('');
-
-    setTimeout(() => {
-      if (verificationCode === '123456') {
+    try {
+      const res = await api.post('/verificar-email', {
+        email,
+        code: verificationCode,
+      });
+      if (res.success) {
         onVerificationSuccess();
       } else {
-        setError('Código incorrecto. Usa 123456 para probar la verificación.');
+        setError(res.error || 'Código incorrecto. Intenta de nuevo.');
       }
-      setIsLoading(false);
-    }, 1500);
+    } catch {
+      setError('Error de red. Intenta de nuevo.');
+    }
+    setIsLoading(false);
   };
 
+  // Llama al endpoint para reenviar el código
   const handleResendCode = async () => {
     setIsResending(true);
-    setTimeout(() => {
-      setIsResending(false);
-      setError('');
-    }, 2000);
+    setError('');
+    try {
+      const res = await api.post('/reenviar-codigo', { email });
+      if (!res.success) {
+        setError(res.error || 'No se pudo reenviar el código.');
+      }
+    } catch {
+      setError('Error de red al reenviar el código.');
+    }
+    setIsResending(false);
   };
 
   return (
@@ -63,12 +77,6 @@ export function EmailVerificationScreen({
               Hemos enviado un código de verificación a
             </Text>
             <Text style={styles.emailText}>{email}</Text>
-            
-            <View style={styles.tipContainer}>
-              <Text style={styles.tipText}>
-                💡 Para probar: usa el código <Text style={styles.tipCode}>123456</Text>
-              </Text>
-            </View>
           </View>
 
           {/* Form */}
@@ -191,20 +199,6 @@ const styles = StyleSheet.create({
     color: '#000000',
     textAlign: 'center',
     marginBottom: 16,
-  },
-  tipContainer: {
-    backgroundColor: '#E7F3FF',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: '#007AFF',
-    textAlign: 'center',
-  },
-  tipCode: {
-    fontWeight: 'bold',
   },
   form: {
     gap: 16,
