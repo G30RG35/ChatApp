@@ -82,6 +82,7 @@ export function SignInForm({ onSwitchToSignUp, onSwitchToForgotPassword, onAuthS
         email: formData.email,
         password: formData.password,
       });
+    console.log("Respuesta login:", data); // <-- Agrega esto
 
       if (data && data.id) {
         setIsSuccess(true);

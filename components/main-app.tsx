@@ -24,6 +24,7 @@ import { VideoCallScreen } from "./video-call-screen";
 import { IncomingCallScreen } from "./incoming-call-screen";
 import { ContactsScreen } from "./contacts-screen";
 import { useUser } from "../context/UserContext";
+import { api } from "../utils/utils";
 
 type Screen =
   | "home"
@@ -67,9 +68,10 @@ export function MainApp({ onLogout }: MainAppProps) {
   const [currentLanguage, setCurrentLanguage] = useState("es");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<{
+    id?: string;
     name: string;
-    avatar?: string;
     members: GroupMember[];
+    messages: Array<any>;
   } | null>(null);
   const [incomingCall, setIncomingCall] = useState<{
     callerName: string;
@@ -138,28 +140,24 @@ export function MainApp({ onLogout }: MainAppProps) {
     setCurrentScreen("createGroup");
   };
 
-  const handleStartGroupChat = (groupName: string, members: Contact[]) => {
-    const groupMembers: GroupMember[] = members.map((member) => ({
-      id: member.id,
-      name: member.name,
-      avatar: member.avatar,
-      role: "member" as const,
-      isOnline: member.status === "online",
-    }));
+const handleStartGroupChat = async (conversation: any) => {
+  // Carga los mensajes del grupo
+  let groupMessages = [];
+  try {
+    groupMessages = await api.get(`/mensajes/grupo/${conversation.id}`);
+  } catch {
+    groupMessages = [];
+  }
 
-    groupMembers.unshift({
-      id: "me",
-      name: "Tú",
-      role: "admin",
-      isOnline: true,
-    });
-
-    setSelectedGroup({
-      name: groupName,
-      members: groupMembers,
-    });
-    setCurrentScreen("groupChat");
-  };
+  // Mapea los miembros si tienes esa info, si no, puedes dejarlo vacío
+  setSelectedGroup({
+    name: conversation.name,
+    members: [],
+    id: conversation.id,
+    messages: groupMessages,
+  });
+  setCurrentScreen("groupChat");
+};
 
   const handleBackToHome = () => {
     setCurrentScreen("home");
@@ -255,9 +253,11 @@ export function MainApp({ onLogout }: MainAppProps) {
         return (
           <View style={styles.homeContainer}>
             <HomeScreen
-              onNewChat={handleNewChat}
-              onStartChat={handleStartChat}
-            />
+  userId={user?.id}
+  onNewChat={handleNewChat}
+  onStartChat={handleStartChat}
+  onStartGroupChat={handleStartGroupChat}
+/>
             {/* <TouchableOpacity
               onPress={simulateIncomingCall}
               style={styles.simulateCallButton}
@@ -319,11 +319,12 @@ export function MainApp({ onLogout }: MainAppProps) {
             contactId={selectedContact.id}
           />
         ) : (
-          <HomeScreen onNewChat={handleNewChat} onStartChat={handleStartChat} />
+          <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />
         );
       case "newChat":
         return (
           <NewChatScreen
+            userId={user?.id}
             onBack={handleBackToHome}
             onStartChat={handleStartChat}
             onCreateGroup={handleCreateGroup}
@@ -332,6 +333,7 @@ export function MainApp({ onLogout }: MainAppProps) {
       case "createGroup":
         return (
           <CreateGroupScreen
+            userId={user?.id}
             onBack={handleBackToHome}
             onCreateGroup={handleStartGroupChat}
           />
@@ -339,8 +341,8 @@ export function MainApp({ onLogout }: MainAppProps) {
       case "groupChat":
         return selectedGroup ? (
           <GroupChatScreen
+            idGroup={selectedGroup.id || ""}
             groupName={selectedGroup.name}
-            groupAvatar={selectedGroup.avatar}
             members={selectedGroup.members}
             onBack={handleBackToHome}
             onVideoCall={handleGroupVideoCall}
@@ -348,7 +350,7 @@ export function MainApp({ onLogout }: MainAppProps) {
             onGroupInfo={() => console.log("Group info")}
           />
         ) : (
-          <HomeScreen onNewChat={handleNewChat} onStartChat={handleStartChat} />
+          <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />
         );
       case "videoCall":
         return activeCall ? (
@@ -361,7 +363,7 @@ export function MainApp({ onLogout }: MainAppProps) {
             onOpenChat={() => console.log("Open chat")}
           />
         ) : (
-          <HomeScreen onNewChat={handleNewChat} onStartChat={handleStartChat} />
+          <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />
         );
       case "incomingCall":
         return incomingCall ? (
@@ -376,11 +378,11 @@ export function MainApp({ onLogout }: MainAppProps) {
             onMessage={() => console.log("Send message")}
           />
         ) : (
-          <HomeScreen onNewChat={handleNewChat} onStartChat={handleStartChat} />
+          <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />
         );
       default:
         return (
-          <HomeScreen onNewChat={handleNewChat} onStartChat={handleStartChat} />
+          <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />
         );
     }
   };

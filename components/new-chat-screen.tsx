@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { ArrowLeft, Search, Users, UserPlus } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
+import { api } from "../utils/utils";
 
 interface Contact {
   id: string;
@@ -22,56 +23,39 @@ interface NewChatScreenProps {
   onBack: () => void;
   onStartChat: (contact: Contact) => void;
   onCreateGroup: () => void;
+  userId: string; // <-- Asegúrate de pasar el userId como prop
 }
 
 export function NewChatScreen({
   onBack,
   onStartChat,
   onCreateGroup,
+  userId,
 }: NewChatScreenProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [contacts] = useState<Contact[]>([
-    {
-      id: "1",
-      name: "Ana García",
-      avatar: "/placeholder.svg",
-      status: "online",
-    },
-    {
-      id: "2",
-      name: "Carlos López",
-      avatar: "/placeholder.svg",
-      status: "offline",
-      lastSeen: t("group.lastSeenHours", "Hace 2 horas", { hours: 2 }),
-    },
-    {
-      id: "3",
-      name: "María Rodríguez",
-      avatar: "/placeholder.svg",
-      status: "online",
-    },
-    {
-      id: "4",
-      name: "David Martín",
-      avatar: "/placeholder.svg",
-      status: "offline",
-      lastSeen: t("group.lastSeenYesterday", "Ayer"),
-    },
-    {
-      id: "5",
-      name: "Laura Sánchez",
-      avatar: "/placeholder.svg",
-      status: "online",
-    },
-    {
-      id: "6",
-      name: "Pedro González",
-      avatar: "/placeholder.svg",
-      status: "offline",
-      lastSeen: t("group.lastSeenHours", "Hace 1 semana", { hours: 168 }),
-    },
-  ]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    // Carga los contactos usando el endpoint real
+    const fetchContacts = async () => {
+      try {
+        const data = await api.get(`/contactos/${userId}`);
+        // Mapea los datos del backend a la interfaz Contact
+        const mapped = data.map((c: any) => ({
+          id: c.contact_id,
+          name: c.name || c.username,
+          avatar: c.avatar || c.avatar_url || "/placeholder.svg",
+          status: c.status === "online" ? "online" : "offline",
+          lastSeen: c.lastSeen || "",
+        }));
+        setContacts(mapped);
+      } catch {
+        setContacts([]);
+      }
+    };
+    fetchContacts();
+  }, [userId]);
 
   const filteredContacts = contacts.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase())

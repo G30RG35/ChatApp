@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { api } from "../utils/utils";
 
 interface Contact {
   id: string;
@@ -20,51 +21,40 @@ interface Contact {
 }
 
 interface CreateGroupScreenProps {
+  userId: string;
   onBack: () => void;
-  onCreateGroup: (groupName: string, selectedContacts: Contact[]) => void;
+  onCreateGroup: (groupName: string, selectedContacts: Contact[], groupId: string) => void;
 }
 
 export function CreateGroupScreen({
+  userId,
   onBack,
   onCreateGroup,
 }: CreateGroupScreenProps) {
   const { t } = useTranslation();
   const [groupName, setGroupName] = useState("");
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
-  const [contacts] = useState<Contact[]>([
-    {
-      id: "1",
-      name: "Ana García",
-      avatar: "https://placehold.co/100x100",
-      status: "online",
-    },
-    {
-      id: "2",
-      name: "Carlos López",
-      avatar: "https://placehold.co/100x100",
-      status: "offline",
-      lastSeen: t("group.lastSeenHours", "Hace 2 horas", { hours: 2 }),
-    },
-    {
-      id: "3",
-      name: "María Rodríguez",
-      avatar: "https://placehold.co/100x100",
-      status: "online",
-    },
-    {
-      id: "4",
-      name: "David Martín",
-      avatar: "https://placehold.co/100x100",
-      status: "offline",
-      lastSeen: t("group.lastSeenYesterday", "Ayer"),
-    },
-    {
-      id: "5",
-      name: "Laura Sánchez",
-      avatar: "https://placehold.co/100x100",
-      status: "online",
-    },
-  ]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    // Carga los contactos usando el endpoint real
+    const fetchContacts = async () => {
+      try {
+        const data = await api.get(`/contactos/${userId}`);
+        const mapped = data.map((c: any) => ({
+          id: c.contact_id,
+          name: c.name || c.username,
+          avatar: c.avatar || c.avatar_url || "https://placehold.co/100x100",
+          status: c.status === "online" ? "online" : "offline",
+          lastSeen: c.lastSeen || "",
+        }));
+        setContacts(mapped);
+      } catch {
+        setContacts([]);
+      }
+    };
+    fetchContacts();
+  }, [userId]);
 
   const handleContactToggle = (contactId: string) => {
     setSelectedContacts((prev) =>
@@ -74,12 +64,19 @@ export function CreateGroupScreen({
     );
   };
 
-  const handleCreateGroup = () => {
-    if (groupName.trim() && selectedContacts.length > 0) {
-      const selectedContactsData = contacts.filter((c) =>
-        selectedContacts.includes(c.id)
-      );
-      onCreateGroup(groupName, selectedContactsData);
+  const handleCreateGroup = async () => {
+    const creatorId = userId;
+    const participantIds = selectedContacts;
+    const result = await api.createGroup(
+      groupName,
+      participantIds,
+      creatorId,
+    );
+    if (result.id) {
+      // Pasa el id del grupo al handler
+      onCreateGroup(groupName, contacts.filter(c => participantIds.includes(c.id)), result.id);
+    } else {
+      // Maneja el error
     }
   };
 
@@ -92,12 +89,9 @@ export function CreateGroupScreen({
         style={styles.contactRow}
         onPress={() => handleContactToggle(item.id)}
       >
-        {/* Checkbox */}
         <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
           {checked && <Ionicons name="checkmark" size={16} color="#fff" />}
         </View>
-
-        {/* Avatar */}
         <View style={styles.avatarContainer}>
           <Image
             source={{ uri: item.avatar || "https://placehold.co/100x100" }}
@@ -105,8 +99,6 @@ export function CreateGroupScreen({
           />
           {item.status === "online" && <View style={styles.onlineDot} />}
         </View>
-
-        {/* Info */}
         <View style={{ flex: 1 }}>
           <Text style={styles.contactName}>{item.name}</Text>
           <Text style={styles.contactStatus}>

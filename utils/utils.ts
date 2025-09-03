@@ -1,7 +1,7 @@
 
 
 export const api = {
-  API_URL: "http://192.168.1.11:3000",
+  API_URL: "http://192.168.1.98:3000",
 
   get: async (endpoint: string) => {
     const res = await fetch(`${api.API_URL}${endpoint}`);
@@ -25,6 +25,23 @@ export const api = {
   },
   delete: async (endpoint: string) => {
     const res = await fetch(`${api.API_URL}${endpoint}`, { method: "DELETE" });
+    return res.json();
+  },
+
+  createGroup: async (
+    groupName: string,
+    participantIds: string[],
+    creatorId: string
+  ) => {
+    const res = await fetch(`${api.API_URL}/grupos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: groupName,
+        participants: participantIds,
+        created_by: creatorId,
+      }),
+    });
     return res.json();
   },
 };
