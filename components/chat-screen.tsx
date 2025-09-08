@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
-  FlatList
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { api } from '../utils/utils';
-import { useTranslation } from 'react-i18next';
+  FlatList,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { api } from "../utils/utils";
+import { useTranslation } from "react-i18next";
+import { io, Socket } from "socket.io-client";
+
+const SOCKET_URL = process.env.API_URL || "http://192.168.1.98:3000";
+console.log("Socket URL:", SOCKET_URL);
 
 interface Message {
   id: string;
@@ -51,49 +55,87 @@ export function ChatScreen({
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  // Conexión y unión a la sala
+  useEffect(() => {
+    const socket = io(SOCKET_URL);
+    socketRef.current = socket;
+
+    socket.emit("join", conversacionId);
+
+    socket.on("receiveMessage", (msg: any) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: msg.id,
+          text: msg.content,
+          sender: msg.sender_id === userId ? "me" : "other",
+          timestamp: new Date(msg.created_at).toLocaleTimeString(
+            i18n.language === "en" ? "en-US" : "es-ES",
+            { hour: "2-digit", minute: "2-digit" }
+          ),
+          status: msg.status || "sent",
+        },
+      ]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+    // eslint-disable-next-line
+  }, [conversacionId, userId]);
 
   // Obtener mensajes al montar
   useEffect(() => {
     fetchMessages();
-    // Opcional: puedes usar un intervalo o sockets para actualizar en tiempo real
     // eslint-disable-next-line
   }, [conversacionId]);
 
   const fetchMessages = async () => {
     try {
-      const data = await api.get(`/mensajes/${conversacionId}`);
+      // Si conversacionId incluye "conv-", extraer solo el GUID
+      const guidOnly = conversacionId.startsWith("conv-")
+        ? conversacionId.substring(5)
+        : conversacionId;
+
+      console.log("Enviando GUID:", guidOnly);
+
+      const data = await api.get(`/mensajes/${guidOnly}`);
+
       setMessages(
         data.map((msg: any) => ({
           id: msg.id.toString(),
           text: msg.contenido,
           sender: msg.remitente_id === userId ? "me" : "other",
-          timestamp: new Date(msg.created_at).toLocaleTimeString(i18n.language === "en" ? "en-US" : "es-ES", { hour: "2-digit", minute: "2-digit" }),
+          timestamp: new Date(msg.created_at).toLocaleTimeString(
+            i18n.language === "en" ? "en-US" : "es-ES",
+            { hour: "2-digit", minute: "2-digit" }
+          ),
           status: msg.estado || "sent",
         }))
       );
-    } catch {
-      // Puedes mostrar un error si lo deseas
+    } catch (error) {
+      console.error("Error fetching messages:", error);
     }
   };
 
   const handleSendMessage = async () => {
     if (newMessage.trim()) {
-      // Envía el mensaje al backend
-      const body = {
-        conversacion_id: conversacionId,
-        remitente_id: userId,
-        contenido: newMessage,
-        tipo: "texto",
+      const messageData = {
+        sender_id: userId,
+        content: newMessage,
+        tipo: "text",
+        status: "sent",
       };
-      try {
-        const res = await api.post("/mensajes", body);
-        if (res && res.id) {
-          setNewMessage("");
-          fetchMessages();
-        }
-      } catch {
-        // Puedes mostrar un error si lo deseas
+      // Envía por socket
+      if (socketRef.current) {
+        socketRef.current.emit("sendMessage", {
+          roomId: conversacionId,
+          message: messageData,
+        });
       }
+      setNewMessage("");
     }
   };
 
@@ -105,7 +147,11 @@ export function ChatScreen({
     scrollToBottom();
   }, [messages]);
 
-  const StatusIndicator = ({ status }: { status: "sent" | "delivered" | "read" }) => {
+  const StatusIndicator = ({
+    status,
+  }: {
+    status: "sent" | "delivered" | "read";
+  }) => {
     return (
       <View style={styles.statusContainer}>
         <View
@@ -173,8 +219,18 @@ export function ChatScreen({
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }: { item: Message }) => (
-            <View style={item.sender === "me" ? styles.myMessage : styles.otherMessage}>
-              <Text style={item.sender === "me" ? styles.myMessageText : styles.otherMessageText}>
+            <View
+              style={
+                item.sender === "me" ? styles.myMessage : styles.otherMessage
+              }
+            >
+              <Text
+                style={
+                  item.sender === "me"
+                    ? styles.myMessageText
+                    : styles.otherMessageText
+                }
+              >
                 {item.text}
               </Text>
               <StatusIndicator status={item.status ?? "sent"} />
@@ -192,7 +248,10 @@ export function ChatScreen({
             onChangeText={setNewMessage}
             onSubmitEditing={handleSendMessage}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={handleSendMessage}
+          >
             <Ionicons name="send" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>

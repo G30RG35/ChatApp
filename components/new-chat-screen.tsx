@@ -17,6 +17,7 @@ interface Contact {
   avatar?: string;
   status: "online" | "offline";
   lastSeen?: string;
+  conversationId?: string; 
 }
 
 interface NewChatScreenProps {
@@ -65,6 +66,21 @@ export function NewChatScreen({
   const offlineContacts = filteredContacts.filter(
     (c) => c.status === "offline"
   );
+
+  const handleStartChat = async (contact: Contact) => {
+    // Llama al nuevo endpoint para crear la conversación (o reutilizarla si ya existe)
+    const result = await api.post("/conversaciones/privada", {
+      user1_id: userId,
+      user2_id: contact.id,
+    });
+    if (result.id) {
+      // Ahora puedes abrir el chat pasando el conversationId correcto
+      onStartChat({
+        ...contact,
+        conversationId: result.id,
+      });
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -121,7 +137,7 @@ export function NewChatScreen({
               <TouchableOpacity
                 key={c.id}
                 style={styles.contactItem}
-                onPress={() => onStartChat(c)}
+                onPress={() => handleStartChat(c)}
               >
                 <View style={styles.avatarOnline} />
                 <View>
@@ -144,7 +160,7 @@ export function NewChatScreen({
               <TouchableOpacity
                 key={c.id}
                 style={styles.contactItem}
-                onPress={() => onStartChat(c)}
+                onPress={() => handleStartChat(c)}
               >
                 <View style={styles.avatarOffline} />
                 <View>

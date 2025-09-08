@@ -6,6 +6,15 @@ const PORT = process.env.PORT || 3000;
 const db = require("./db");
 const nodemailer = require("nodemailer");
 const { v4: uuidv4 } = require("uuid");
+const http = require("http");
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Ajusta esto según tu frontend
+    methods: ["GET", "POST"],
+  },
+});
 
 app.use(express.json());
 
@@ -249,16 +258,34 @@ app.delete("/contactos/:id", async (req, res) => {
   }
 });
 
-// ---------- MENSAJES ----------
 app.get("/mensajes/:conversacionId", async (req, res) => {
   try {
     await db.poolConnect;
+
+    const fullId = req.params.conversacionId;
+
+    // Extraer solo la parte GUID
+    const guidPart = fullId.startsWith("conv-") ? fullId.substring(5) : fullId;
+
+    // Verificar si es un GUID válido
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!uuidRegex.test(guidPart)) {
+      return res.status(400).json({
+        error: "Formato de ID inválido",
+        received: fullId,
+        expectedFormat: "conv-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      });
+    }
+
     const result = await db.pool
       .request()
-      .input("conversacionId", db.sql.Int, req.params.conversacionId)
+      .input("conversacionId", db.sql.VarChar(36), guidPart) // <-- Cambiado a VarChar(36)
       .query(
-        "SELECT * FROM mensajes WHERE conversacion_id = @conversacionId ORDER BY created_at ASC"
+        "SELECT * FROM messages WHERE conversation_id = @conversacionId ORDER BY created_at ASC"
       );
+
     res.json(result.recordset);
   } catch (err) {
     console.error("GET /mensajes/:conversacionId:", err);
@@ -297,29 +324,35 @@ app.get("/mensajes/grupo/:idGroup", async (req, res) => {
 });
 
 app.post("/mensajes", async (req, res) => {
-  const { conversacion_id, remitente_id, contenido, tipo } = req.body;
-  if (!conversacion_id || !remitente_id || !contenido)
+  const { conversation_id, sender_id, content, tipo } = req.body;
+  if (!conversation_id || !sender_id || !content)
     return res.status(400).json({ error: "Faltan datos requeridos" });
   try {
     await db.poolConnect;
+    const id = uuidv4();
     const result = await db.pool
       .request()
-      .input("conversacion_id", db.sql.Int, conversacion_id)
-      .input("remitente_id", db.sql.Int, remitente_id)
-      .input("contenido", db.sql.NVarChar, contenido)
-      .input("tipo", db.sql.NVarChar, tipo || "texto")
+      .input("id", db.sql.VarChar(36), id)
+      .input("conversation_id", db.sql.VarChar(36), conversation_id)
+      .input("sender_id", db.sql.VarChar(36), sender_id)
+      .input("content", db.sql.NVarChar(1000), content)
+      .input("tipo", db.sql.NVarChar(20), tipo || "text")
+      .input("created_at", db.sql.DateTime, new Date())
+      .input("status", db.sql.NVarChar(20), "sent")
       .query(
-        "INSERT INTO mensajes (conversacion_id, remitente_id, contenido, tipo) OUTPUT INSERTED.id VALUES (@conversacion_id, @remitente_id, @contenido, @tipo)"
+        `INSERT INTO messages (id, conversation_id, sender_id, content, tipo, created_at, status)
+         OUTPUT INSERTED.id
+         VALUES (@id, @conversation_id, @sender_id, @content, @tipo, @created_at, @status)`
       );
-    res
-      .status(201)
-      .json({
-        id: result.recordset[0].id,
-        conversacion_id,
-        remitente_id,
-        contenido,
-        tipo,
-      });
+    res.status(201).json({
+      id,
+      conversation_id,
+      sender_id,
+      content,
+      tipo,
+      created_at: new Date(),
+      status: "sent",
+    });
   } catch (err) {
     console.error("POST /mensajes:", err);
     res.status(500).json({ error: err.message });
@@ -395,14 +428,74 @@ app.post("/conversaciones", async (req, res) => {
   }
 });
 
+app.post("/conversaciones/privada", async (req, res) => {
+  const { user1_id, user2_id } = req.body;
+  if (!user1_id || !user2_id)
+    return res.status(400).json({ error: "Faltan los IDs de los usuarios" });
+
+  try {
+    await db.poolConnect;
+    // Verifica si ya existe una conversación privada entre estos dos usuarios
+    const existing = await db.pool
+      .request()
+      .input("user1", db.sql.VarChar(36), user1_id)
+      .input("user2", db.sql.VarChar(36), user2_id).query(`
+        SELECT c.id FROM conversations c
+        JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = @user1
+        JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = @user2
+        WHERE c.is_group = 0
+      `);
+    if (existing.recordset.length > 0) {
+      return res
+        .status(200)
+        .json({ id: existing.recordset[0].id, alreadyExists: true });
+    }
+
+    const conversationId = uuidv4();
+    // 1. Crear la conversación
+    await db.pool
+      .request()
+      .input("id", db.sql.VarChar(36), conversationId)
+      .input("is_group", db.sql.Bit, 0)
+      .input("created_by", db.sql.VarChar(36), user1_id)
+      .input("created_at", db.sql.DateTime, new Date())
+      .input("updated_at", db.sql.DateTime, new Date()).query(`
+        INSERT INTO conversations (id, is_group, created_by, created_at, updated_at)
+        VALUES (@id, @is_group, @created_by, @created_at, @updated_at)
+      `);
+
+    // 2. Agregar ambos participantes
+    for (const uid of [user1_id, user2_id]) {
+      await db.pool
+        .request()
+        .input("id", db.sql.VarChar(36), uuidv4())
+        .input("conversation_id", db.sql.VarChar(36), conversationId)
+        .input("user_id", db.sql.VarChar(36), uid)
+        .input("role", db.sql.NVarChar(20), "member")
+        .input("joined_at", db.sql.DateTime, new Date())
+        .input("left_at", db.sql.DateTime, null).query(`
+          INSERT INTO conversation_participants (id, conversation_id, user_id, role, joined_at, left_at)
+          VALUES (@id, @conversation_id, @user_id, @role, @joined_at, @left_at)
+        `);
+    }
+
+    res.status(201).json({ id: conversationId });
+  } catch (err) {
+    console.error("POST /conversaciones/privada:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------- GRUPOS ----------
 // Obtener grupos
 app.get("/grupos", async (req, res) => {
   try {
     await db.poolConnect;
-    const result = await db.pool.request().query(
-      `SELECT id, name, description, avatar_url, created_by, is_public, max_members, created_at, updated_at FROM groups`
-    );
+    const result = await db.pool
+      .request()
+      .query(
+        `SELECT id, name, description, avatar_url, created_by, is_public, max_members, created_at, updated_at FROM groups`
+      );
     res.json(result.recordset);
   } catch (err) {
     console.error("GET /grupos:", err);
@@ -416,8 +509,15 @@ app.post("/grupos", async (req, res) => {
   const { name, participants, created_by } = req.body;
   console.log("Creando grupo:", { name, participants, created_by });
 
-  if (!name || !created_by || !Array.isArray(participants) || participants.length === 0)
-    return res.status(400).json({ error: "Faltan datos requeridos (name, created_by y participants)" });
+  if (
+    !name ||
+    !created_by ||
+    !Array.isArray(participants) ||
+    participants.length === 0
+  )
+    return res.status(400).json({
+      error: "Faltan datos requeridos (name, created_by y participants)",
+    });
   try {
     await db.poolConnect;
     const groupId = uuidv4();
@@ -457,7 +557,11 @@ app.post("/grupos", async (req, res) => {
         .input("id", db.sql.VarChar(36), uuidv4())
         .input("conversation_id", db.sql.VarChar(36), groupId)
         .input("user_id", db.sql.VarChar(36), userId)
-        .input("role", db.sql.NVarChar, userId === created_by ? "admin" : "member")
+        .input(
+          "role",
+          db.sql.NVarChar,
+          userId === created_by ? "admin" : "member"
+        )
         .input("joined_at", db.sql.DateTime, new Date())
         .input("left_at", db.sql.DateTime, null)
         .query(
@@ -684,7 +788,71 @@ app.get("/mensajes/grupo/:idGroup", async (req, res) => {
   res.json([]);
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
+// --- SOCKET.IO LOGIC ---
+io.on("connection", (socket) => {
+  console.log("Usuario conectado:", socket.id);
+
+  socket.on("join", (roomId) => {
+    socket.join(roomId);
+    console.log(`Socket ${socket.id} se unió a la sala ${roomId}`);
+  });
+
+  socket.on("sendMessage", async (data) => {
+    const { roomId, message } = data;
+    try {
+      await db.poolConnect;
+
+      // Extraer solo la parte GUID
+      const guidRoomId = roomId.startsWith("conv-")
+        ? roomId.substring(5)
+        : roomId;
+
+      console.log("RoomId completo:", roomId);
+      console.log("GUID extraído:", guidRoomId);
+
+      // Verificar si es un GUID válido
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+      if (!uuidRegex.test(guidRoomId)) {
+        console.error("GUID inválido:", guidRoomId);
+        return;
+      }
+
+      const id = uuidv4();
+      await db.pool
+        .request()
+        .input("id", db.sql.VarChar(36), id) // <-- Cambiado a VarChar(36)
+        .input("conversation_id", db.sql.VarChar(36), guidRoomId) // <-- Cambiado a VarChar(36)
+        .input("sender_id", db.sql.VarChar(36), message.sender_id) // <-- Cambiado a VarChar(36)
+        .input("content", db.sql.VarChar(db.sql.MAX), message.content) // <-- Cambiado a VarChar(MAX)
+        .input("message_type", db.sql.VarChar(20), message.tipo || "text")
+        .input("created_at", db.sql.DateTime, new Date())
+        .input("status", db.sql.VarChar(20), message.status || "sent")
+        .query(
+          `INSERT INTO messages (id, conversation_id, sender_id, content, message_type, created_at, status)
+         VALUES (@id, @conversation_id, @sender_id, @content, @message_type, @created_at, @status)`
+        );
+
+      const savedMessage = {
+        ...message,
+        id,
+        conversation_id: guidRoomId,
+        created_at: new Date(),
+      };
+
+      io.to(roomId).emit("receiveMessage", savedMessage);
+    } catch (err) {
+      console.error("Error guardando mensaje por socket:", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Usuario desconectado:", socket.id);
+  });
+});
+
+// Cambia app.listen por server.listen
+server.listen(PORT, () => {
   console.log(`Servidor API escuchando en el puerto ${PORT}`);
 });
