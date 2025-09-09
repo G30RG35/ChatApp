@@ -18,7 +18,7 @@ import { api } from "../utils/utils";
 import { useTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = process.env.API_URL || "http://192.168.1.98:3000";
+const SOCKET_URL = process.env.API_URL || "http://192.168.1.2:3000";
 console.log("Socket URL:", SOCKET_URL);
 
 interface Message {
@@ -64,23 +64,32 @@ export function ChatScreen({
 
     socket.emit("join", conversacionId);
 
-    socket.on("receiveMessage", (msg: any) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: msg.id,
-          text: msg.content,
-          sender: msg.sender_id === userId ? "me" : "other",
-          timestamp: new Date(msg.created_at).toLocaleTimeString(
-            i18n.language === "en" ? "en-US" : "es-ES",
-            { hour: "2-digit", minute: "2-digit" }
-          ),
-          status: msg.status || "sent",
-        },
-      ]);
-    });
+    const handler = (msg: any) => {
+      // Solo agrega el mensaje si es para la conversación actual
+      if (
+        msg.conversation_id === conversacionId ||
+        msg.conversation_id === (conversacionId.startsWith("conv-") ? conversacionId.substring(5) : conversacionId)
+      ) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: msg.id,
+            text: msg.content,
+            sender: msg.sender_id === userId ? "me" : "other",
+            timestamp: new Date(msg.created_at).toLocaleTimeString(
+              i18n.language === "en" ? "en-US" : "es-ES",
+              { hour: "2-digit", minute: "2-digit" }
+            ),
+            status: msg.status || "sent",
+          },
+        ]);
+      }
+    };
+
+    socket.on("receiveMessage", handler);
 
     return () => {
+      socket.off("receiveMessage", handler);
       socket.disconnect();
     };
     // eslint-disable-next-line
@@ -103,18 +112,18 @@ export function ChatScreen({
 
       const data = await api.get(`/mensajes/${guidOnly}`);
 
-      setMessages(
-        data.map((msg: any) => ({
-          id: msg.id.toString(),
-          text: msg.contenido,
-          sender: msg.remitente_id === userId ? "me" : "other",
-          timestamp: new Date(msg.created_at).toLocaleTimeString(
-            i18n.language === "en" ? "en-US" : "es-ES",
-            { hour: "2-digit", minute: "2-digit" }
-          ),
-          status: msg.estado || "sent",
-        }))
-      );
+      // Ejemplo para mapear mensajes en el frontend (React)
+      const mappedMessages = data.map((msg: any) => ({
+        id: msg.id,
+        text: msg.content, // <-- usa 'content' aquí
+        sender: msg.sender_id === userId ? "me" : "other",
+        timestamp: new Date(msg.created_at).toLocaleTimeString(
+          i18n.language === "en" ? "en-US" : "es-ES",
+          { hour: "2-digit", minute: "2-digit" }
+        ),
+        status: msg.status || "sent",
+      }));
+      setMessages(mappedMessages);
     } catch (error) {
       console.error("Error fetching messages:", error);
     }

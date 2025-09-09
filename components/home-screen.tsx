@@ -16,6 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { api } from "../utils/utils";
 import { useUser } from "../context/UserContext";
+import { io } from "socket.io-client";
+
+const SOCKET_URL = "http://192.168.1.2:3000"; // Reemplaza con tu URL de Socket.io
+const socket = io(SOCKET_URL);
 
 interface Conversation {
   id: string;
@@ -54,10 +58,46 @@ export function HomeScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [chats, setChats] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentOpenChatId, setCurrentOpenChatId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     fetchChats();
   }, []);
+
+  useEffect(() => {
+    if (userId && socket) {
+      socket.emit("join", userId); // Unirse a la sala personal
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    socket.on("receiveMessage", (msg) => {
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === msg.conversation_id
+            ? {
+                ...chat,
+                lastMessage: msg.content, // <-- actualiza el último mensaje
+                timestamp: new Date(msg.created_at).toLocaleTimeString(
+                  "es-ES",
+                  { hour: "2-digit", minute: "2-digit" }
+                ),
+                unreadCount:
+                  chat.id !== currentOpenChatId
+                    ? (chat.unreadCount || 0) + 1
+                    : 0,
+              }
+            : chat
+        )
+      );
+    });
+
+    return () => {
+      socket.off("receiveMessage");
+    };
+  }, [currentOpenChatId]);
 
   const fetchChats = async () => {
     setLoading(true);
@@ -90,6 +130,7 @@ export function HomeScreen({
   );
 
   const handleConversationClick = (conversation: Conversation) => {
+    setCurrentOpenChatId(conversation.id); // Establece el chat actual abierto
     if (conversation.isGroup) {
       // Abre el chat grupal
       if (onStartGroupChat) {
@@ -103,162 +144,170 @@ export function HomeScreen({
         avatar: conversation.avatar,
         status: conversation.isOnline ? "online" : "offline",
       };
+
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === conversation.id ? { ...chat, unreadCount: 0 } : chat
+        )
+      );
+
       onStartChat(contact);
     }
-  }
+  };
 
-    const handleRefresh = () => {
-      setRefreshing(true);
-      setTimeout(() => {
-        setRefreshing(false);
-      }, 1000);
-    };
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
 
-    const AvatarComponent = ({
-      name,
-      avatar,
-      size = 48,
-    }: {
-      name: string;
-      avatar?: string;
-      size?: number;
-    }) => {
-      const initials = name
-        .split(" ")
-        .map((n) => n[0])
-        .join("");
-
-      return (
-        <View
-          style={[
-            styles.avatar,
-            { width: size, height: size, borderRadius: size / 2 },
-          ]}
-        >
-          {avatar ? (
-            <Image
-              source={{ uri: avatar }}
-              style={[
-                styles.avatarImage,
-                { width: size, height: size, borderRadius: size / 2 },
-              ]}
-            />
-          ) : (
-            <Text style={[styles.avatarFallback, { fontSize: size * 0.4 }]}>
-              {initials}
-            </Text>
-          )}
-        </View>
-      );
-    };
-
-    const renderConversationItem = ({ item }: { item: Conversation }) => (
-      <TouchableOpacity
-        style={styles.conversationItem}
-        onPress={() => handleConversationClick(item)}
-      >
-        <View style={styles.avatarContainer}>
-          <AvatarComponent name={item.name} avatar={item.avatar} size={48} />
-          {item.isOnline && <View style={styles.onlineIndicator} />}
-        </View>
-
-        <View style={styles.conversationContent}>
-          <View style={styles.conversationHeader}>
-            <Text style={styles.conversationName} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <Text style={styles.timestamp}>{item.timestamp}</Text>
-          </View>
-          <View style={styles.conversationFooter}>
-            <Text style={styles.lastMessage} numberOfLines={1}>
-              {item.lastMessage}
-            </Text>
-            {item.unreadCount > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadCount}>{item.unreadCount}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-
-    const renderEmptyState = () => (
-      <View style={styles.emptyState}>
-        <Ionicons name="chatbubble-outline" size={64} color="#C7C7CC" />
-        <Text style={styles.emptyStateTitle}>
-          {t("home.emptyTitle", "No hay conversaciones")}
-        </Text>
-        <Text style={styles.emptyStateText}>
-          {t("home.emptyText", "Inicia una nueva conversación para comenzar")}
-        </Text>
-      </View>
-    );
-
-    if (loading) {
-      return <ActivityIndicator />;
-    }
+  const AvatarComponent = ({
+    name,
+    avatar,
+    size = 48,
+  }: {
+    name: string;
+    avatar?: string;
+    size?: number;
+  }) => {
+    const initials = name
+      .split(" ")
+      .map((n) => n[0])
+      .join("");
 
     return (
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.logo}>
-              <Ionicons name="chatbubble" size={24} color="#FFFFFF" />
-            </View>
-            <Text style={styles.headerTitle}>
-              {t("home.title", "Mensajes")}
-            </Text>
-          </View>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Ionicons
-              name="search"
-              size={20}
-              color="#8E8E93"
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t(
-                "home.searchPlaceholder",
-                "Buscar conversaciones..."
-              )}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#8E8E93"
-            />
-          </View>
-        </View>
-
-        {/* Conversations List */}
-        <FlatList
-          data={filteredConversations}
-          renderItem={renderConversationItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={
-            filteredConversations.length === 0
-              ? styles.emptyListContainer
-              : styles.listContentContainer
-          }
-          ListEmptyComponent={renderEmptyState}
-          style={styles.list}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          showsVerticalScrollIndicator={false}
-        />
-
-        {/* Floating Action Button */}
-        <TouchableOpacity style={styles.fab} onPress={onNewChat}>
-          <Ionicons name="add" size={30} color="#FFFFFF" />
-        </TouchableOpacity>
-      </SafeAreaView>
+      <View
+        style={[
+          styles.avatar,
+          { width: size, height: size, borderRadius: size / 2 },
+        ]}
+      >
+        {avatar ? (
+          <Image
+            source={{ uri: avatar }}
+            style={[
+              styles.avatarImage,
+              { width: size, height: size, borderRadius: size / 2 },
+            ]}
+          />
+        ) : (
+          <Text style={[styles.avatarFallback, { fontSize: size * 0.4 }]}>
+            {initials}
+          </Text>
+        )}
+      </View>
     );
   };
+
+  const renderConversationItem = ({ item }: { item: Conversation }) => (
+    <TouchableOpacity
+      style={styles.conversationItem}
+      onPress={() => handleConversationClick(item)}
+    >
+      <View style={styles.avatarContainer}>
+        <AvatarComponent name={item.name} avatar={item.avatar} size={48} />
+        {item.isOnline && <View style={styles.onlineIndicator} />}
+      </View>
+
+      <View style={styles.conversationContent}>
+        <View style={styles.conversationHeader}>
+          <Text style={styles.conversationName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.timestamp}>{item.timestamp}</Text>
+        </View>
+        <View style={styles.conversationFooter}>
+          <Text style={styles.lastMessage} numberOfLines={1}>
+            {item.lastMessage}
+          </Text>
+          {item.unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadCount}>{item.unreadCount}</Text>
+            </View>
+          )}
+          {}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="chatbubble-outline" size={64} color="#C7C7CC" />
+      <Text style={styles.emptyStateTitle}>
+        {t("home.emptyTitle", "No hay conversaciones")}
+      </Text>
+      <Text style={styles.emptyStateText}>
+        {t("home.emptyText", "Inicia una nueva conversación para comenzar")}
+      </Text>
+    </View>
+  );
+
+  if (loading) {
+    return <ActivityIndicator />;
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.logo}>
+            <Ionicons name="chatbubble" size={24} color="#FFFFFF" />
+          </View>
+          <Text style={styles.headerTitle}>
+            {t("home.title", "Mensajes")}
+          </Text>
+        </View>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons
+            name="search"
+            size={20}
+            color="#8E8E93"
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t(
+              "home.searchPlaceholder",
+              "Buscar conversaciones..."
+            )}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#8E8E93"
+          />
+        </View>
+      </View>
+
+      {/* Conversations List */}
+      <FlatList
+        data={filteredConversations}
+        renderItem={renderConversationItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={
+          filteredConversations.length === 0
+            ? styles.emptyListContainer
+            : styles.listContentContainer
+        }
+        ListEmptyComponent={renderEmptyState}
+        style={styles.list}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        showsVerticalScrollIndicator={false}
+      />
+
+      {/* Floating Action Button */}
+      <TouchableOpacity style={styles.fab} onPress={onNewChat}>
+        <Ionicons name="add" size={30} color="#FFFFFF" />
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

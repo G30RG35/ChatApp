@@ -842,6 +842,21 @@ io.on("connection", (socket) => {
       };
 
       io.to(roomId).emit("receiveMessage", savedMessage);
+
+      // Notifica a todos los usuarios de la sala personal
+      // Busca los participantes de la conversación
+      const participantsResult = await db.pool
+        .request()
+        .input("conversation_id", db.sql.VarChar(36), guidRoomId)
+        .query("SELECT user_id FROM conversation_participants WHERE conversation_id = @conversation_id");
+
+      const participants = participantsResult.recordset.map(r => r.user_id);
+
+      // Envía el mensaje a la sala personal de cada usuario (excepto el remitente si quieres)
+      participants.forEach(userId => {
+        io.to(userId).emit("receiveMessage", savedMessage);
+        io.to(userId).emit("updateChats");
+      });
     } catch (err) {
       console.error("Error guardando mensaje por socket:", err);
     }
