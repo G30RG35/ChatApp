@@ -18,7 +18,7 @@ import { api } from "../utils/utils";
 import { useTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = process.env.API_URL || "http://192.168.1.2:3000";
+const SOCKET_URL = process.env.API_URL || "http://192.168.1.98:3000";
 console.log("Socket URL:", SOCKET_URL);
 
 interface Message {

@@ -1,7 +1,7 @@
 console.log("API URL:", process.env.API_URL);
 
 export const api = {
-  API_URL: process.env.API_URL || "http://192.168.1.2:3000",
+  API_URL: process.env.API_URL || "http://192.168.1.98:3000",
 
   get: async (endpoint: string) => {
     const res = await fetch(`${api.API_URL}${endpoint}`);

@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useCall } from "../context/CallContext";
+import type { CallContextType } from "../context/CallContext";
 import {
   View,
   Text,
@@ -61,7 +63,36 @@ interface MainAppProps {
 }
 
 export function MainApp({ onLogout }: MainAppProps) {
-    const { user } = useUser();
+  const { user } = useUser();
+  console.log("[main-app] userId actual:", user?.id);
+  const callContext = useCall() as CallContextType | null;
+  const incomingCall = callContext?.incomingCall;
+  const setIncomingCall = callContext?.setIncomingCall;
+  useEffect(() => {
+    if (incomingCall && setIncomingCall) {
+      // fallback para tipos antiguos: incomingCall.from o incomingCall.callerName
+      const from = (incomingCall as any).from || (incomingCall as any).callerName || "";
+      const participants = [
+        {
+          id: "me",
+          name: "Tú",
+          isMuted: false,
+          isVideoOn: true,
+          isMe: true,
+        },
+        {
+          id: from,
+          name: from,
+          isMuted: false,
+          isVideoOn: true,
+        },
+      ];
+      console.log("[main-app] incomingCall de:", from);
+      setActiveCall({ participants, isGroupCall: false });
+      setCurrentScreen("videoCall");
+      setIncomingCall(null);
+    }
+  }, [incomingCall, setIncomingCall]);
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -73,13 +104,7 @@ export function MainApp({ onLogout }: MainAppProps) {
     members: GroupMember[];
     messages: Array<any>;
   } | null>(null);
-  const [incomingCall, setIncomingCall] = useState<{
-    callerName: string;
-    callerAvatar?: string;
-    isGroupCall?: boolean;
-    groupName?: string;
-    participantCount?: number;
-  } | null>(null);
+  // Elimina el estado local de incomingCall y setIncomingCall, usa solo el contexto global
   const [activeCall, setActiveCall] = useState<{
     participants: Array<{
       id: string;
@@ -165,17 +190,18 @@ const handleStartGroupChat = async (conversation: any) => {
     setSelectedGroup(null);
   };
 
-  const handleVideoCall = (contactName: string, contactAvatar?: string) => {
+  const handleVideoCall = (contactName: string, contactAvatar?: string, contactId?: string) => {
+    const { user } = useUser();
     const participants = [
       {
-        id: "me",
+        id: user?.id || "", // userId real del usuario actual
         name: "Tú",
         isMuted: false,
         isVideoOn: true,
         isMe: true,
       },
       {
-        id: "other",
+        id: contactId || "", // userId real del contacto
         name: contactName,
         avatar: contactAvatar,
         isMuted: false,
@@ -196,8 +222,9 @@ const handleStartGroupChat = async (conversation: any) => {
         isVideoOn: true,
         isMe: member.id === "me",
       }));
+      console.log("[main-app] ids de miembros del grupo:", selectedGroup.members.map(m => m.id));
       setActiveCall({ participants, isGroupCall: true });
-      setIncomingCall(null);
+      if (setIncomingCall) setIncomingCall(null);
       setCurrentScreen("videoCall");
     }
   };
@@ -207,43 +234,15 @@ const handleStartGroupChat = async (conversation: any) => {
     setCurrentScreen("home");
   };
 
-  const handleAcceptIncomingCall = () => {
-    console.log("Accepting incoming call");
-    if (incomingCall) {
-      const participants = [
-        {
-          id: "me",
-          name: "Tú",
-          isMuted: false,
-          isVideoOn: true,
-          isMe: true,
-        },
-        {
-          id: "caller",
-          name: incomingCall.callerName,
-          avatar: incomingCall.callerAvatar,
-          isMuted: false,
-          isVideoOn: true,
-        },
-      ];
-      setActiveCall({ participants, isGroupCall: incomingCall.isGroupCall });
-      setIncomingCall(null);
-      setCurrentScreen("videoCall");
-    }
-  };
-
-  const handleDeclineIncomingCall = () => {
-    console.log("Declining incoming call");
-    setIncomingCall(null);
-    setCurrentScreen("home");
-  };
+  // handleAcceptIncomingCall y handleDeclineIncomingCall ya no son necesarios, la lógica se maneja en el efecto global
 
   const simulateIncomingCall = () => {
-    setIncomingCall({
-      callerName: "Ana García",
-      callerAvatar: "https://placekitten.com/40/40",
-      isGroupCall: false,
-    });
+    if (setIncomingCall) {
+      setIncomingCall({
+        from: "Ana García",
+        roomId: "simulada-123"
+      });
+    }
     setCurrentScreen("incomingCall");
   };
 
@@ -309,7 +308,7 @@ const handleStartGroupChat = async (conversation: any) => {
             contactAvatar={selectedContact.avatar}
             onBack={handleBackToHome}
             onVideoCall={() =>
-              handleVideoCall(selectedContact.name, selectedContact.avatar)
+              handleVideoCall(selectedContact.name, selectedContact.avatar, selectedContact.id)
             }
             onVoiceCall={() =>
               console.log("Voice call with", selectedContact.name)
@@ -365,21 +364,7 @@ const handleStartGroupChat = async (conversation: any) => {
         ) : (
           <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />
         );
-      case "incomingCall":
-        return incomingCall ? (
-          <IncomingCallScreen
-            callerName={incomingCall.callerName}
-            callerAvatar={incomingCall.callerAvatar}
-            isGroupCall={incomingCall.isGroupCall}
-            groupName={incomingCall.groupName}
-            participantCount={incomingCall.participantCount}
-            onAccept={handleAcceptIncomingCall}
-            onDecline={handleDeclineIncomingCall}
-            onMessage={() => console.log("Send message")}
-          />
-        ) : (
-          <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />
-        );
+      // Elimina la pantalla "incomingCall", ahora el aviso es global
       default:
         return (
           <HomeScreen userId={user?.id} onNewChat={handleNewChat} onStartChat={handleStartChat} />

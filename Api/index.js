@@ -789,12 +789,16 @@ app.get("/mensajes/grupo/:idGroup", async (req, res) => {
 });
 
 // --- SOCKET.IO LOGIC ---
+
 io.on("connection", (socket) => {
-  console.log("Usuario conectado:", socket.id);
+  console.log(`[SOCKET] Usuario conectado: ${socket.id}`);
 
   socket.on("join", (roomId) => {
     socket.join(roomId);
-    console.log(`Socket ${socket.id} se unió a la sala ${roomId}`);
+    console.log(`[SOCKET] ${socket.id} JOIN sala: ${roomId}`);
+    // Mostrar usuarios actuales en la sala
+    const socketsInRoom = io.sockets.adapter.rooms.get(roomId);
+    console.log(`[SOCKET] Usuarios en sala ${roomId}:`, socketsInRoom ? Array.from(socketsInRoom) : []);
   });
 
   socket.on("sendMessage", async (data) => {
@@ -863,8 +867,65 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("Usuario desconectado:", socket.id);
+    console.log(`[SOCKET] Usuario DESCONECTADO: ${socket.id}`);
+    // Mostrar en qué salas estaba
+    const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
+    rooms.forEach((roomId) => {
+      const socketsInRoom = io.sockets.adapter.rooms.get(roomId);
+      console.log(`[SOCKET] Usuarios restantes en sala ${roomId}:`, socketsInRoom ? Array.from(socketsInRoom) : []);
+    });
   });
+    // --- WebRTC Signaling Events ---
+    // Mapeo de userId <-> socketId
+    if (!global.userSocketMap) global.userSocketMap = {};
+    // Cuando un usuario se une a una sala, guarda su userId y socketId
+    socket.on("join", (roomId, userId) => {
+      if (userId) {
+        global.userSocketMap[userId] = socket.id;
+        socket.userId = userId;
+      }
+      socket.join(roomId);
+    });
+
+    // Evento para avisar de llamada entrante (soporta grupo)
+    // 'to' puede ser string (userId) o array de userIds
+    socket.on("start-call", ({ roomId, from, to }) => {
+      if (Array.isArray(to)) {
+        console.log(`[SIGNALING] Llamada grupal de ${from} a [${to.join(", ")}] en sala ${roomId}`);
+        to.forEach((userId) => {
+          const targetSocketId = global.userSocketMap[userId];
+          if (targetSocketId) {
+            io.to(targetSocketId).emit("incoming-call", { from, roomId });
+          } else {
+            console.warn(`[SIGNALING] No se encontró socketId para userId destino: ${userId}`);
+          }
+        });
+      } else {
+        console.log(`[SIGNALING] Llamada entrante de ${from} a ${to} en sala ${roomId} (socket: ${socket.id})`);
+        const targetSocketId = global.userSocketMap[to];
+        if (targetSocketId) {
+          io.to(targetSocketId).emit("incoming-call", { from, roomId });
+        } else {
+          console.warn(`[SIGNALING] No se encontró socketId para userId destino: ${to}`);
+        }
+      }
+    });
+
+    // Enviar oferta SDP a otros usuarios en la sala
+    socket.on("webrtc-offer", ({ roomId, offer, from }) => {
+      console.log(`[SIGNALING] Oferta recibida de ${from} en sala ${roomId} (socket: ${socket.id})`);
+      socket.to(roomId).emit("webrtc-offer", { offer, from });
+    });
+
+    socket.on("webrtc-answer", ({ roomId, answer, from }) => {
+      console.log(`[SIGNALING] Respuesta recibida de ${from} en sala ${roomId} (socket: ${socket.id})`);
+      socket.to(roomId).emit("webrtc-answer", { answer, from });
+    });
+
+    socket.on("webrtc-ice-candidate", ({ roomId, candidate, from }) => {
+      console.log(`[SIGNALING] ICE candidate de ${from} en sala ${roomId} (socket: ${socket.id})`);
+      socket.to(roomId).emit("webrtc-ice-candidate", { candidate, from });
+    });
 });
 
 // Cambia app.listen por server.listen

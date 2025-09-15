@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
+import { Modal } from "react-native";
+import { RTCView } from "react-native-webrtc";
+import { useWebRTC } from "../utils/useWebRTC";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import {
   PhoneOff,
   Mic,
@@ -52,61 +49,148 @@ export function VideoCallScreen({
   const [callDuration, setCallDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
 
-  const me = participants.find((p) => p.isMe) || participants[0];
-  const others = participants.filter((p) => !p.isMe);
+  // Suponiendo que el usuario actual es el primero con isMe
+  const me = participants.find((p: Participant) => p.isMe) || participants[0];
+  const others = participants.filter((p: Participant) => !p.isMe);
+  console.log("[video-call-screen] userId actual:", me?.id);
+  console.log("[video-call-screen] ids de otros participantes:", others.map(p => p.id));
+
+  // WebRTC hook
+  // roomId y userId deben ser pasados como props reales en integración final
+  const roomId = me?.id || "room-demo";
+  const userId = me?.id || "user-demo";
+  // Determinar los destinatarios: para llamadas grupales, todos menos yo; para 1:1, solo el peer
+  let callTargets: string | string[] | undefined = undefined;
+  if (isGroupCall) {
+    callTargets = others.map((p) => p.id);
+  } else {
+    callTargets = others[0]?.id;
+  }
+  // Explicitly type localStream and remoteStream as MediaStream | null
+  const {
+    localStream,
+    remoteStream,
+    connected,
+    incomingCall,
+    startCall,
+    endCall,
+    acceptCall,
+    rejectCall,
+  } = useWebRTC(roomId, userId, callTargets) as any;
+
+  // Iniciar llamada automáticamente al entrar a la vista si soy el iniciador
+  useEffect(() => {
+    // Lógica: si no hay llamada conectada ni entrante, inicia la llamada
+    if (!connected && !incomingCall) {
+      startCall();
+    }
+    // Solo se ejecuta una vez al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callTargets]);
 
   useEffect(() => {
-    const timer = setInterval(() => setCallDuration((prev) => prev + 1), 1000);
+    const timer = setInterval(
+      () => setCallDuration((prev: number) => prev + 1),
+      1000
+    );
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     if (showControls) {
       timeout = setTimeout(() => setShowControls(false), 3000);
     }
     return () => clearTimeout(timeout);
   }, [showControls]);
 
+  // Mute y video controlados localmente y en el stream
   const handleToggleMute = () => {
-    setIsMuted(!isMuted);
+    if (localStream && typeof localStream.getAudioTracks === "function") {
+      localStream.getAudioTracks().forEach((track: any) => {
+        track.enabled = isMuted;
+      });
+    }
+    setIsMuted((prev: boolean) => !prev);
     onToggleMute?.();
   };
 
   const handleToggleVideo = () => {
-    setIsVideoOn(!isVideoOn);
+    if (localStream) {
+      localStream.getVideoTracks().forEach((track: any) => {
+        track.enabled = !isVideoOn;
+      });
+    }
+    setIsVideoOn((prev: boolean) => !prev);
     onToggleVideo?.();
   };
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+    // @ts-ignore
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
   const handleScreenClick = () => setShowControls(true);
 
   return (
     <View style={styles.container} onTouchStart={handleScreenClick}>
+      {/* Modal de llamada entrante */}
+      <Modal
+        visible={!!incomingCall}
+        transparent
+        animationType="fade"
+        onRequestClose={rejectCall}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {t("videoCall.incoming", "Llamada entrante")}
+            </Text>
+            <Text style={styles.modalFrom}>
+              {incomingCall?.from
+                ? `${t("videoCall.from", "De")} ${incomingCall.from}`
+                : ""}
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.controlButton, styles.controlActive]}
+                onPress={rejectCall}
+              >
+                <PhoneOff size={24} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.controlButton, { backgroundColor: "#059669" }]}
+                onPress={acceptCall}
+              >
+                <Video size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {/* Main Video Area */}
       <View style={styles.videoArea}>
-        {isVideoOn ? (
+        {/* Video remoto */}
+        {remoteStream ? (
+          <RTCView
+            streamURL={(remoteStream as any).toURL()}
+            style={{ flex: 1, backgroundColor: "#222" }}
+            objectFit="cover"
+          />
+        ) : (
           <View style={styles.videoPlaceholder}>
             <Text style={styles.avatarFallback}>
               {others[0]?.name?.charAt(0).toUpperCase() || "U"}
             </Text>
-            <Text style={styles.videoName}>{others[0]?.name || t("videoCall.user", "Usuario")}</Text>
-          </View>
-        ) : (
-          <View style={styles.videoOff}>
-            <VideoOff size={32} color="#9ca3af" />
-            <Text style={styles.videoOffText}>{t("videoCall.cameraOff", "Cámara desactivada")}</Text>
+            <Text style={styles.videoName}>
+              {others[0]?.name || t("videoCall.user", "Usuario")}
+            </Text>
           </View>
         )}
 
-        {/* Group Call Participants */}
+        {/* Group Call Participants (solo UI, no video real aún) */}
         {isGroupCall && others.length > 1 && (
           <View style={styles.groupParticipants}>
             {others.slice(1, 4).map((p) => (
@@ -139,91 +223,129 @@ export function VideoCallScreen({
           </View>
         )}
 
-        {/* Self Video */}
-        <View style={styles.selfVideoCard}>
-          {isVideoOn ? (
+        {/* Self Video siempre visible, incluso antes de conectar */}
+        <View style={styles.selfVideoCard} pointerEvents="none">
+          {localStream ? (
+            <RTCView
+              streamURL={(localStream as any).toURL()}
+              style={styles.selfVideo}
+              objectFit="cover"
+            />
+          ) : (
             <Text style={styles.avatarFallback}>
               {me?.name?.charAt(0).toUpperCase() || "M"}
             </Text>
-          ) : (
-            <VideoOff size={16} color="#9ca3af" />
           )}
           {isMuted && (
             <MicOff size={12} color="#f87171" style={styles.selfMutedIcon} />
           )}
         </View>
-      </View>
 
-      {/* Top Bar */}
-      {showControls && (
-        <View style={styles.topBar}>
-          <Text style={styles.durationBadge}>
-            {formatDuration(callDuration)}
-          </Text>
-          {isGroupCall && (
-            <Text style={styles.participantsBadge}>
-              {participants.length} {t("videoCall.participants", "participantes")}
+        {/* Top Bar */}
+        {showControls && (
+          <View style={styles.topBar}>
+            <Text style={styles.durationBadge}>
+              {formatDuration(callDuration)}
             </Text>
-          )}
-          <View style={styles.topButtons}>
-            <TouchableOpacity onPress={() => setIsFullscreen(!isFullscreen)}>
-              {isFullscreen ? (
-                <Minimize2 size={16} color="#fff" />
+            {isGroupCall && (
+              <Text style={styles.participantsBadge}>
+                {participants.length}{" "}
+                {t("videoCall.participants", "participantes")}
+              </Text>
+            )}
+            <View style={styles.topButtons}>
+              <TouchableOpacity onPress={() => setIsFullscreen(!isFullscreen)}>
+                {isFullscreen ? (
+                  <Minimize2 size={16} color="#fff" />
+                ) : (
+                  <Maximize2 size={16} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Bottom Controls */}
+        {showControls && (
+          <View style={styles.bottomBar}>
+            {/* Botón de mute */}
+            <TouchableOpacity
+              style={[styles.controlButton, isMuted && styles.controlActive]}
+              onPress={handleToggleMute}
+            >
+              {isMuted ? (
+                <MicOff size={20} color="#fff" />
               ) : (
-                <Maximize2 size={16} color="#fff" />
+                <Mic size={20} color="#fff" />
               )}
             </TouchableOpacity>
+
+            {/* Botón de video on/off */}
+            <TouchableOpacity
+              style={[styles.controlButton, !isVideoOn && styles.controlActive]}
+              onPress={handleToggleVideo}
+            >
+              {isVideoOn ? (
+                <Video size={20} color="#fff" />
+              ) : (
+                <VideoOff size={20} color="#fff" />
+              )}
+            </TouchableOpacity>
+
+            {/* Botón de colgar: termina la llamada y ejecuta onEndCall */}
+            <TouchableOpacity
+              style={[styles.controlButtonEnd]}
+              onPress={() => {
+                endCall();
+                onEndCall();
+              }}
+            >
+              <PhoneOff size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Botón para abrir chat */}
+            <TouchableOpacity style={styles.controlButton} onPress={onOpenChat}>
+              <MessageCircle size={20} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Botón para iniciar llamada eliminado: ahora la llamada inicia automáticamente al entrar a la vista */}
           </View>
-        </View>
-      )}
-
-      {/* Bottom Controls */}
-      {showControls && (
-        <View style={styles.bottomBar}>
-          <TouchableOpacity
-            style={[styles.controlButton, isMuted && styles.controlActive]}
-            onPress={handleToggleMute}
-          >
-            {isMuted ? (
-              <MicOff size={20} color="#fff" />
-            ) : (
-              <Mic size={20} color="#fff" />
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.controlButton, !isVideoOn && styles.controlActive]}
-            onPress={handleToggleVideo}
-          >
-            {isVideoOn ? (
-              <Video size={20} color="#fff" />
-            ) : (
-              <VideoOff size={20} color="#fff" />
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.controlButtonEnd]}
-            onPress={onEndCall}
-          >
-            <PhoneOff size={24} color="#fff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.controlButton} onPress={onOpenChat}>
-            <MessageCircle size={20} color="#fff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.controlButton}>
-            <Users size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
- container: {marginTop: 20, flex: 1, backgroundColor: "#000" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#1f2937",
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    width: 300,
+  },
+  modalTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  modalFrom: {
+    color: "#fff",
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 32,
+  },
+  container: { marginTop: 20, flex: 1, backgroundColor: "#000" },
   videoArea: { flex: 1, position: "relative" },
   videoPlaceholder: { flex: 1, justifyContent: "center", alignItems: "center" },
   avatarFallback: { fontSize: 32, fontWeight: "bold", color: "#fff" },
@@ -259,12 +381,25 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 16,
     right: 16,
-    width: 80,
-    height: 100,
+    width: 100,
+    height: 140,
     backgroundColor: "#1f2937",
-    borderRadius: 8,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 10,
+    overflow: "hidden",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  selfVideo: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    backgroundColor: "#222",
   },
   selfMutedIcon: { position: "absolute", top: 2, right: 2 },
   topBar: {

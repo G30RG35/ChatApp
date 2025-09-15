@@ -18,7 +18,7 @@ import { api } from "../utils/utils";
 import { useUser } from "../context/UserContext";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "http://192.168.1.2:3000"; // Reemplaza con tu URL de Socket.io
+const SOCKET_URL = "http://192.168.1.98.4:3000"; // Reemplaza con tu URL de Socket.io
 const socket = io(SOCKET_URL);
 
 interface Conversation {
